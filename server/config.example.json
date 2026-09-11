@@ -1,0 +1,7 @@
+{
+  "host": "0.0.0.0",
+  "port": 8000,
+  "admin_password": "请修改为强密码",
+  "database": "dingdong.db",
+  "terminal_offline_days": 30
+}

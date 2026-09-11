@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c5392b' d='M12 2a6 6 0 0 0-6 6v3.6c0 .6-.24 1.18-.66 1.6L4 15.5h16l-1.34-1.9a2.4 2.4 0 0 1-.66-1.6V8a6 6 0 0 0-6-6z'/%3E%3Cpath fill='%23c5392b' d='M9.5 17a2.5 2.5 0 0 0 5 0z'/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>叮咚 · 消息推送系统</title>
+<meta name="description" content="叮咚——把消息送到每一台 Windows 桌面。实时推送、离线补发、语音提醒、网页消息中心、开放接口。">
+<style>
+/* ================= 叮咚官网 · 信笺邮政风 =================
+   纸 #f6f1e6 · 墨 #2b2620 · 朱砂 #c5392b · 靛 #41506b
+   ========================================================= */
+:root {
+  --paper: #f6f1e6;
+  --paper-2: #efe7d5;
+  --paper-3: #e7dcc4;
+  --ink: #2b2620;
+  --ink-soft: #6f6554;
+  --ink-faint: #a3987f;
+  --seal: #c5392b;
+  --seal-deep: #a02a1f;
+  --indigo: #41506b;
+  --line: #d6cab0;
+  --f-display: "Noto Serif SC", "Source Han Serif SC", "STZhongsong", "SimSun", serif;
+  --f-body: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --f-kai: "KaiTi", "楷体", "STKaiti", serif;
+  --f-mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--f-body);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+/* 纸张纹理 + 网点 */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(rgba(43,38,32,.045) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+a { color: var(--seal); text-decoration: none; }
+::selection { background: var(--seal); color: var(--paper); }
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  border-bottom: 1px solid var(--line);
+  background: rgba(246,241,230,.92);
+  backdrop-filter: blur(4px);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand .seal-mini {
+  width: 34px; height: 34px; background: var(--seal); color: #fff;
+  font-family: var(--f-kai); font-size: 13px; line-height: 1.15;
+  display: grid; place-items: center; border-radius: 5px;
+  writing-mode: vertical-rl; letter-spacing: 2px;
+  box-shadow: 2px 2px 0 rgba(160,42,31,.25);
+}
+.brand b { font-family: var(--f-display); font-size: 21px; letter-spacing: 6px; }
+.topnav { display: flex; gap: 26px; margin-left: auto; }
+.topnav a {
+  color: var(--ink-soft); font-size: 14.5px; letter-spacing: 2px; position: relative;
+}
+.topnav a::after {
+  content: ""; position: absolute; left: 0; right: 100%; bottom: -6px;
+  border-bottom: 2px solid var(--seal); transition: right .25s ease;
+}
+.topnav a:hover { color: var(--ink); }
+.topnav a:hover::after { right: 0; }
+
+/* ---------- 章节标头 ---------- */
+section { padding: 86px 0 30px; }
+.sec-no {
+  font-family: var(--f-mono); font-size: 13px; color: var(--seal);
+  letter-spacing: 3px; display: flex; align-items: center; gap: 14px;
+}
+.sec-no::after { content: ""; flex: 1; border-top: 1px dashed var(--ink-faint); }
+h2.sec-title {
+  font-family: var(--f-display); font-size: 34px; letter-spacing: 10px;
+  margin: 10px 0 8px; font-weight: 700;
+}
+.sec-sub { font-family: var(--f-kai); color: var(--ink-soft); font-size: 16px; margin-bottom: 40px; }
+
+/* ---------- Hero ---------- */
+.hero { padding: 88px 0 60px; position: relative; }
+.hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--f-mono); font-size: 12.5px; color: var(--indigo);
+  border: 1px solid currentColor; padding: 4px 14px; letter-spacing: 3px;
+  margin-bottom: 26px;
+}
+.hero-tag i { width: 6px; height: 6px; background: var(--seal); border-radius: 50%; font-style: normal; }
+h1.hero-title {
+  font-family: var(--f-display); font-weight: 900;
+  font-size: clamp(64px, 9vw, 108px); letter-spacing: 18px;
+  line-height: 1.05; display: flex; align-items: flex-start; gap: 18px;
+}
+h1 .hero-seal {
+  writing-mode: vertical-rl; font-family: var(--f-kai); font-size: 15px; font-weight: 400;
+  background: var(--seal); color: #fff; padding: 8px 4px; border-radius: 4px;
+  letter-spacing: 4px; margin-top: 14px;
+  box-shadow: 3px 3px 0 rgba(160,42,31,.22);
+  animation: stampIn .55s cubic-bezier(.2,1.6,.4,1) .5s both;
+}
+.hero-slogan {
+  font-family: var(--f-display); font-size: clamp(20px, 2.6vw, 27px);
+  letter-spacing: 6px; margin: 18px 0 14px;
+}
+.hero-slogan em { font-style: normal; color: var(--seal); }
+.hero-desc { color: var(--ink-soft); max-width: 520px; font-size: 15.5px; }
+.hero-cta { display: flex; gap: 16px; margin-top: 34px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 15.5px; letter-spacing: 3px; padding: 13px 30px;
+  border: 1.5px solid var(--ink); color: var(--ink);
+  transition: all .22s ease; position: relative;
+}
+.btn:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--line); }
+.btn-primary {
+  background: var(--seal); border-color: var(--seal); color: #fff;
+  box-shadow: 3px 3px 0 rgba(160,42,31,.28);
+}
+.btn-primary:hover { background: var(--seal-deep); box-shadow: 4px 4px 0 rgba(160,42,31,.4); }
+.hero-meta {
+  margin-top: 30px; font-family: var(--f-mono); font-size: 12.5px;
+  color: var(--ink-faint); letter-spacing: 1.5px;
+  display: flex; flex-wrap: wrap; gap: 8px 22px;
+}
+.hero-meta span::before { content: "◆"; color: var(--seal); margin-right: 7px; font-size: 9px; vertical-align: 2px; }
+
+/* 信封插画 */
+.envelope-scene { position: relative; height: 400px; }
+.envelope {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-52%) rotate(-2.5deg);
+  width: 350px; height: 232px; background: #fdfaf2;
+  border: 1.5px solid var(--line); box-shadow: 0 18px 40px -18px rgba(43,38,32,.35);
+}
+.envelope::before { /* 信封盖 */
+  content: ""; position: absolute; inset: 0;
+  background: var(--paper-2);
+  clip-path: polygon(0 0, 100% 0, 50% 62%);
+  border-bottom: 1.5px solid var(--line);
+}
+.env-lines { position: absolute; right: 26px; bottom: 22px; width: 150px; }
+.env-lines i { display: block; border-bottom: 1.5px solid var(--line); margin-top: 16px; }
+.env-lines i:nth-child(2) { width: 82%; }
+.env-lines i:nth-child(3) { width: 64%; }
+.env-tag {
+  position: absolute; left: -14px; bottom: 34px; background: var(--indigo); color: #fff;
+  font-family: var(--f-kai); font-size: 14px; padding: 4px 12px 4px 18px;
+  letter-spacing: 5px; box-shadow: 3px 3px 0 rgba(43,38,32,.18);
+  animation: stampIn .5s cubic-bezier(.2,1.6,.4,1) .75s both;
+}
+.stamp {
+  position: absolute; right: 24px; top: -26px; width: 88px; height: 104px;
+  background: #fdfaf2; border: 2.5px dashed var(--seal);
+  display: grid; place-items: center; padding: 8px;
+  transform: rotate(4deg);
+  animation: stampIn .5s cubic-bezier(.2,1.6,.4,1) .35s both;
+}
+.stamp svg { width: 46px; height: 46px; }
+.stamp small {
+  font-family: var(--f-mono); font-size: 9.5px; color: var(--seal);
+  letter-spacing: 1px; text-align: center; margin-top: 3px;
+}
+.postmark {
+  position: absolute; left: 12px; top: -18px; width: 118px; height: 118px;
+  color: var(--indigo); opacity: .75; transform: rotate(-12deg);
+  animation: stampIn .5s cubic-bezier(.2,1.6,.4,1) .9s both;
+}
+.ono {
+  position: absolute; font-family: var(--f-kai); color: var(--seal);
+  opacity: 0; animation: floatOno 5s ease-in-out infinite;
+}
+.ono.a { left: 4%; top: 12%; font-size: 26px; animation-delay: 1.4s; }
+.ono.b { right: 2%; top: 30%; font-size: 21px; animation-delay: 3s; }
+.ono.c { left: 10%; bottom: 8%; font-size: 18px; color: var(--indigo); animation-delay: 4.2s; }
+
+/* ---------- 电报滚动条 ---------- */
+.telegram {
+  border-top: 1.5px dashed var(--ink-faint); border-bottom: 1.5px dashed var(--ink-faint);
+  background: var(--paper-2); overflow: hidden; padding: 11px 0; margin-top: 20px;
+}
+.telegram .tick {
+  display: inline-block; white-space: nowrap; font-family: var(--f-mono);
+  font-size: 13px; color: var(--ink-soft); letter-spacing: 3px;
+  animation: tick 36s linear infinite;
+}
+.telegram .tick b { color: var(--seal); font-weight: 400; }
+
+/* ---------- 功能票据 ---------- */
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px;
+}
+.ticket {
+  background: #fdfaf2; border: 1.5px solid var(--line); position: relative;
+  padding: 26px 24px 22px; transition: all .25s ease;
+}
+.ticket::before, .ticket::after { /* 撕票缺口 */
+  content: ""; position: absolute; top: -9px; width: 18px; height: 18px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 50%;
+}
+.ticket::before { left: -10px; border-right-color: transparent; border-bottom-color: transparent; }
+.ticket::after { right: -10px; border-left-color: transparent; border-bottom-color: transparent; }
+.ticket:hover { transform: translateY(-5px) rotate(-.4deg); box-shadow: 0 16px 30px -16px rgba(43,38,32,.3); border-color: var(--ink-faint); }
+.ticket .t-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.ticket .t-no { font-family: var(--f-mono); font-size: 12px; color: var(--seal); letter-spacing: 2px; }
+.ticket h3 { font-family: var(--f-display); font-size: 19px; letter-spacing: 3px; }
+.ticket p { color: var(--ink-soft); font-size: 14px; }
+.ticket .t-foot {
+  margin-top: 14px; padding-top: 10px; border-top: 1.5px dashed var(--line);
+  font-family: var(--f-kai); font-size: 13px; color: var(--ink-faint); letter-spacing: 2px;
+}
+
+/* ---------- 下载 ---------- */
+.download-card {
+  background: #fdfaf2; border: 1.5px solid var(--line); padding: 46px 44px;
+  display: grid; grid-template-columns: 1.2fr .8fr; gap: 40px; align-items: center;
+  box-shadow: 6px 6px 0 var(--paper-3);
+  position: relative;
+}
+.download-card .corner {
+  position: absolute; width: 26px; height: 26px; border: 2px solid var(--seal);
+}
+.download-card .corner.tl { left: 10px; top: 10px; border-right: none; border-bottom: none; }
+.download-card .corner.br { right: 10px; bottom: 10px; border-left: none; border-top: none; }
+.dl-title { font-family: var(--f-display); font-size: 26px; letter-spacing: 4px; margin-bottom: 6px; }
+.dl-sub { color: var(--ink-soft); font-size: 14.5px; }
+.dl-info {
+  margin: 18px 0 24px; font-family: var(--f-mono); font-size: 12.5px;
+  color: var(--ink-faint); line-height: 2.1; letter-spacing: .5px;
+}
+.dl-info b { color: var(--ink); font-weight: 400; }
+.dl-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn-big {
+  font-size: 16.5px; padding: 15px 34px; letter-spacing: 4px;
+}
+.dl-side { text-align: center; }
+.bell-big { width: 120px; height: 120px; margin: 0 auto 14px; position: relative; }
+.bell-big svg { width: 100%; height: 100%; }
+.bell-big:hover svg { animation: ring 1s ease-in-out; transform-origin: 50% 8%; }
+.dl-side .hint { font-family: var(--f-kai); font-size: 13.5px; color: var(--ink-faint); letter-spacing: 2px; }
+
+/* ---------- 教程 ---------- */
+.tut-tabs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+.tut-tab {
+  border: 1.5px solid var(--line); background: transparent; cursor: pointer;
+  font-family: var(--f-body); font-size: 14.5px; color: var(--ink-soft);
+  padding: 9px 22px; letter-spacing: 2px; transition: all .2s;
+}
+.tut-tab:hover { border-color: var(--ink); color: var(--ink); }
+.tut-tab.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.tut-pane { display: none; }
+.tut-pane.on { display: block; animation: fadeUp .4s ease both; }
+.steps { counter-reset: step; }
+.step {
+  position: relative; padding: 4px 0 22px 62px;
+}
+.step::before {
+  counter-increment: step; content: counter(step, decimal-leading-zero);
+  position: absolute; left: 0; top: 2px; width: 40px; height: 40px;
+  border: 1.5px solid var(--seal); border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--f-mono); font-size: 13px; color: var(--seal);
+}
+.step::after {
+  content: ""; position: absolute; left: 19.5px; top: 46px; bottom: 4px;
+  border-left: 1.5px dashed var(--ink-faint);
+}
+.step:last-child::after { display: none; }
+.step h4 { font-family: var(--f-display); font-size: 17.5px; letter-spacing: 2px; margin-bottom: 6px; }
+.step p { color: var(--ink-soft); font-size: 14.5px; }
+.step .chips { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  font-family: var(--f-mono); font-size: 12px; color: var(--indigo);
+  border: 1px solid var(--line); background: var(--paper-2); padding: 2px 10px;
+}
+.codeblock {
+  background: #2b2620; color: #ece4d2; font-family: var(--f-mono);
+  font-size: 13px; line-height: 1.9; padding: 18px 22px; margin-top: 12px;
+  overflow-x: auto; position: relative; letter-spacing: .3px;
+  box-shadow: 4px 4px 0 var(--paper-3);
+}
+.codeblock::before {
+  content: "电报 TELEGRAM"; position: absolute; right: 12px; top: 8px;
+  font-size: 10px; color: #8d8270; letter-spacing: 2px;
+}
+.codeblock .c { color: #8d8270; }
+.codeblock .k { color: #e8927c; }
+.codeblock .s { color: #b7c9a0; }
+
+/* ---------- 接口文档 ---------- */
+.api-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 30px; align-items: start; }
+.api-table { width: 100%; border-collapse: collapse; background: #fdfaf2; border: 1.5px solid var(--line); font-size: 13.5px; }
+.api-table caption {
+  caption-side: top; text-align: left; font-family: var(--f-mono);
+  font-size: 12px; color: var(--seal); letter-spacing: 2px; padding-bottom: 10px;
+}
+.api-table th, .api-table td { border-bottom: 1px dashed var(--line); padding: 10px 14px; text-align: left; }
+.api-table th { font-family: var(--f-mono); font-weight: 400; color: var(--ink-faint); font-size: 12.5px; letter-spacing: 1px; }
+.api-table td:first-child { font-family: var(--f-mono); color: var(--seal); white-space: nowrap; }
+.api-table tr:last-child td { border-bottom: none; }
+.api-side .codeblock { margin-top: 0; }
+.api-side .codeblock + .codeblock { margin-top: 14px; }
+.status-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.status-row span {
+  font-family: var(--f-mono); font-size: 12px; border: 1px solid var(--line);
+  padding: 3px 12px; color: var(--ink-soft); background: var(--paper-2);
+}
+.status-row b { color: var(--seal); font-weight: 400; }
+.api-more { margin-top: 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.api-more .note { font-family: var(--f-kai); color: var(--ink-faint); font-size: 13.5px; letter-spacing: 2px; }
+
+/* ---------- 页脚 ---------- */
+footer { margin-top: 90px; border-top: 1.5px solid var(--line); background: var(--paper-2); }
+footer .wrap {
+  display: flex; align-items: center; justify-content: center; gap: 26px;
+  padding-top: 34px; padding-bottom: 34px; flex-direction: column;
+}
+.postmark-link { display: inline-block; line-height: 0; opacity: .6; transition: opacity .3s; }
+.postmark-link:hover { opacity: .95; }
+.copy { font-family: var(--f-mono); font-size: 12px; color: var(--ink-faint); letter-spacing: 2px; }
+.copy .sep { margin: 0 10px; }
+
+/* ---------- 动效 ---------- */
+@keyframes stampIn {
+  0% { opacity: 0; transform: scale(2.1) rotate(14deg); }
+  60% { opacity: 1; transform: scale(.94) rotate(-3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.stamp { animation-name: stampInKeep; }
+@keyframes stampInKeep {
+  0% { opacity: 0; transform: scale(2.1) rotate(10deg); }
+  70% { opacity: 1; transform: scale(.95) rotate(5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(4deg); }
+}
+@keyframes ring {
+  0%,100% { transform: rotate(0); }
+  20% { transform: rotate(13deg); }
+  40% { transform: rotate(-11deg); }
+  60% { transform: rotate(7deg); }
+  80% { transform: rotate(-4deg); }
+}
+@keyframes floatOno {
+  0%,100% { opacity: 0; transform: translateY(6px); }
+  20%,50% { opacity: .85; transform: translateY(0); }
+  70% { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.reveal { opacity: 0; transform: translateY(24px); transition: all .7s cubic-bezier(.2,.7,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+.reveal:nth-child(2) { transition-delay: .08s; }
+.reveal:nth-child(3) { transition-delay: .16s; }
+.reveal:nth-child(4) { transition-delay: .24s; }
+.reveal:nth-child(5) { transition-delay: .32s; }
+.reveal:nth-child(6) { transition-delay: .4s; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  .hero .wrap { grid-template-columns: 1fr; }
+  .envelope-scene { height: 330px; transform: scale(.86); }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .download-card { grid-template-columns: 1fr; padding: 34px 26px; }
+  .api-grid { grid-template-columns: 1fr; }
+  .topnav { display: none; }
+}
+@media (max-width: 560px) {
+  .features-grid { grid-template-columns: 1fr; }
+  h1.hero-title { letter-spacing: 10px; }
+  section { padding: 60px 0 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================= 顶栏 ================= -->
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <span class="seal-mini">叮咚</span>
+      <b>叮咚</b>
+    </div>
+    <nav class="topnav">
+      <a href="#intro">系统简介</a>
+      <a href="#features">功能特性</a>
+      <a href="#download">客户端下载</a>
+      <a href="#tutorial">使用教程</a>
+      <a href="#api">接口文档</a>
+    </nav>
+  </div>
+</div>
+
+<!-- ================= HERO ================= -->
+<header class="hero" id="intro">
+  <div class="wrap">
+    <div>
+      <div class="hero-tag"><i></i>内部通信 · 第 壹 号 · INTERNAL DISPATCH</div>
+      <h1 class="hero-title">叮咚<span class="hero-seal">驿站</span></h1>
+      <div class="hero-slogan">把每一条消息，<em>送到每一台</em> Windows 桌面</div>
+      <p class="hero-desc">
+        叮咚是一套部署在自己服务器上的通用消息推送系统。你的业务程序通过一个 HTTP
+        接口投递消息，安装了客户端的电脑立即收到提醒——提示音、语音朗读、右下角弹窗，
+        点击直达网页消息中心。离线自动补发，一条不丢。
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#download">下载客户端</a>
+        <a class="btn" href="#api">接口文档</a>
+      </div>
+      <div class="hero-meta">
+        <span>Windows 7 SP1 / 10</span>
+        <span>.NET 6 自包含 · 免装运行时</span>
+        <span>内网可用 · 数据不出服务器</span>
+        <span>单文件 SQLite 存储</span>
+      </div>
+    </div>
+    <div class="envelope-scene" aria-hidden="true">
+      <span class="ono a">叮——</span>
+      <span class="ono b">咚——</span>
+      <span class="ono c">消息到了</span>
+      <div class="envelope">
+        <div class="env-tag">加 急</div>
+        <div class="env-lines"><i></i><i></i><i></i></div>
+        <div class="stamp">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3c-.3 0-.5.2-.5.5v.6C8.4 4.5 6 7.2 6 10.5c0 3.7-1 5.3-2 6.2-.3.3-.1.8.3.8h15.4c.4 0 .6-.5.3-.8-1-.9-2-2.5-2-6.2 0-3.3-2.4-6-5.5-6.9v-.6c0-.3-.2-.5-.5-.5Z" fill="#c5392b"/><path d="M9.8 19.5a2.3 2.3 0 0 0 4.4 0" stroke="#c5392b" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <small>CHINA<br>PUSH POST</small>
+        </div>
+        <svg class="postmark" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="55" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <circle cx="60" cy="60" r="44" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path id="pmc" d="M60,60 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0" fill="none"/>
+          <text font-size="10.5" letter-spacing="2.5" fill="currentColor" font-family="monospace">
+            <textPath href="#pmc">DINGDONG DISPATCH · SAME DAY DELIVERY ·</textPath>
+          </text>
+          <text x="60" y="57" text-anchor="middle" font-size="17" fill="currentColor" font-family="KaiTi,serif" letter-spacing="4">叮咚驿站</text>
+          <text x="60" y="76" text-anchor="middle" font-size="9" fill="currentColor" font-family="monospace" letter-spacing="2">EST. 2026</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="telegram" aria-hidden="true">
+    <span class="tick">
+      叮——咚——消息到站请查收 · <b>WebSocket 实时送达</b> · 离线入库自动补发 · 提示音 / 语音朗读 / 右下角弹窗 · 网页消息中心按日分组 · <b>一个接口群发多终端</b> · 超期未连自动注销 · API Key 鉴权 ·&nbsp;
+      叮——咚——消息到站请查收 · <b>WebSocket 实时送达</b> · 离线入库自动补发 · 提示音 / 语音朗读 / 右下角弹窗 · 网页消息中心按日分组 · <b>一个接口群发多终端</b> · 超期未连自动注销 · API Key 鉴权 ·&nbsp;
+    </span>
+  </div>
+</header>
+
+<!-- ================= 功能特性 ================= -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-no">编号 002 / FEATURES</div>
+    <h2 class="sec-title">功能票据</h2>
+    <p class="sec-sub">—— 六张票据，件件当日送达</p>
+    <div class="features-grid">
+      <div class="ticket reveal">
+        <div class="t-head"><span class="t-no">No.1</span><h3>实时推送</h3></div>
+        <p>客户端与服务器保持 WebSocket 长连接，消息发出一秒内送达弹窗；不在线的消息自动入库，上线即刻补发，一条不丢。</p>
+        <div class="t-foot">已送达 DELIVERED</div>
+      </div>
+      <div class="ticket reveal">
+        <div class="t-head"><span class="t-no">No.2</span><h3>声音与朗读</h3></div>
+        <p>每条消息自带清脆提示音；可选开启 Windows 系统语音朗读标题或摘要，人不在屏幕前也能听见消息来了。</p>
+        <div class="t-foot">可听 AUDIBLE</div>
+      </div>
+      <div class="ticket reveal">
+        <div class="t-head"><span class="t-no">No.3</span><h3>右下角弹窗</h3></div>
+        <p>消息在屏幕右下角弹出小窗，自动堆叠、悬停留住；点击弹窗直接打开网页消息中心并定位到那条消息。</p>
+        <div class="t-foot">即点即达 ONE TAP</div>
+      </div>
+      <div class="ticket reveal">
+        <div class="t-head"><span class="t-no">No.4</span><h3>网页消息中心</h3></div>
+        <p>消息按今天 / 昨天 / 近 3 天 / 近 7 天分组折叠，更早的进历史记录分页查询；已读未读一目了然，看完随手可删。</p>
+        <div class="t-foot">井井有条 SORTED</div>
+      </div>
+      <div class="ticket reveal">
+        <div class="t-head"><span class="t-no">No.5</span><h3>管理后台</h3></div>
+        <p>终端注册/注销/恢复、消息记录与送达状态、API 密钥发放、后台直接测试推送——一切尽在掌握。</p>
+        <div class="t-foot">在线监管 MANAGED</div>
+      </div>
+      <div class="ticket reveal">
+        <div class="t-head"><span class="t-no">No.6</span><h3>开放接口</h3></div>
+        <p>任何程序凭 API Key 调用一个 POST 接口即可推送；支持一条消息群发多个终端，curl / Python / C# / JS 示例齐备。</p>
+        <div class="t-foot">开放 OPEN API</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 下载 ================= -->
+<section id="download">
+  <div class="wrap">
+    <div class="sec-no">编号 003 / DOWNLOAD</div>
+    <h2 class="sec-title">领取客户端</h2>
+    <p class="sec-sub">—— 安装包两兆余，装完即驻守托盘</p>
+    <div class="download-card reveal">
+      <span class="corner tl"></span><span class="corner br"></span>
+      <div>
+        <div class="dl-title">叮咚 Windows 客户端</div>
+        <p class="dl-sub">安装后填写服务器地址与终端名称即可注册，无需管理员权限。</p>
+        <div class="dl-info" id="dlInfo">
+          版本 <b id="dlVer">—</b>　·　大小 <b id="dlSize">—</b><br>
+          更新时间 <b id="dlDate">—</b>　·　运行环境 <b>免安装（.NET 6 自包含）</b>
+        </div>
+        <div class="dl-actions">
+          <a class="btn btn-primary btn-big" id="dlBtn" href="/download/DingDongSetup.exe">下载安装包</a>
+          <a class="btn" href="/download/dingdong-api-doc.md">接口文档 .md</a>
+        </div>
+      </div>
+      <div class="dl-side">
+        <div class="bell-big">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.5c-.4 0-.7.3-.7.7v.8C7.8 4.6 5.2 7.5 5.2 11c0 4-1.1 5.7-2.2 6.7-.4.4-.1 1 .4 1h17.2c.5 0 .8-.6.4-1-1.1-1-2.2-2.7-2.2-6.7 0-3.5-2.6-6.4-6.1-7v-.8c0-.4-.3-.7-.7-.7Z" fill="#c5392b"/>
+            <path d="M9.4 20.4a2.7 2.7 0 0 0 5.2 0" stroke="#c5392b" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="hint">悬停铃铛听个响（视觉上的）</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 教程 ================= -->
+<section id="tutorial">
+  <div class="wrap">
+    <div class="sec-no">编号 004 / TUTORIAL</div>
+    <h2 class="sec-title">使用教程</h2>
+    <p class="sec-sub">—— 四封指导函，按序投递</p>
+    <div class="tut-tabs" id="tutTabs">
+      <button class="tut-tab on" data-t="t0">① 服务端部署</button>
+      <button class="tut-tab" data-t="t1">② 客户端安装</button>
+      <button class="tut-tab" data-t="t2">③ 管理后台</button>
+      <button class="tut-tab" data-t="t3">④ 程序接入推送</button>
+    </div>
+
+    <div class="tut-pane on" id="t0">
+      <div class="steps">
+        <div class="step">
+          <h4>准备环境</h4>
+          <p>服务器需安装 Python 3.8+（推荐 3.8），Windows / Linux 均可。项目目录下 <code>server/</code> 即服务端全部内容。</p>
+          <div class="chips"><span class="chip">Python 3.8</span><span class="chip">pip</span></div>
+        </div>
+        <div class="step">
+          <h4>安装依赖并启动</h4>
+          <p>建议使用虚拟环境；默认监听 8000 端口，数据库为目录下自动创建的 SQLite 文件。</p>
+          <div class="codeblock">cd server<br>python -m venv venv<br>venv\Scripts\pip install -r requirements.txt<br>venv\Scripts\python run.py <span class="c"># 或直接运行 start.bat</span></div>
+        </div>
+        <div class="step">
+          <h4>修改管理密码</h4>
+          <p>编辑 <code>server/config.json</code> 中的 <code>admin_password</code>，生产环境务必先改默认密码。</p>
+        </div>
+        <div class="step">
+          <h4>（可选）生产部署</h4>
+          <p>Web 前端推荐 Nginx 反向代理并托管静态资源，后端用 NSSM 注册为 Windows 服务开机自启；参考项目 <code>deploy/部署说明.md</code>。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tut-pane" id="t1">
+      <div class="steps">
+        <div class="step">
+          <h4>下载并安装</h4>
+          <p>从本页下载 <code>DingDongSetup.exe</code>，双击安装（当前用户模式，无需管理员权限）。运行时已内嵌，无需安装 .NET。</p>
+        </div>
+        <div class="step">
+          <h4>注册终端</h4>
+          <p>首次运行填写服务器地址（如 <code>http://192.168.1.10:8000</code>）与终端名称，点击「注册终端」，获得 6 位终端编码。注册信息保存在本机，重启电脑自动重连。</p>
+        </div>
+        <div class="step">
+          <h4>接收消息</h4>
+          <p>程序常驻系统托盘：来消息时提示音 + 右下角弹窗（可选语音朗读），托盘图标红底数字显示未读条数。双击托盘或点击弹窗打开网页消息中心。</p>
+        </div>
+        <div class="step">
+          <h4>个性设置</h4>
+          <p>主面板可开关提示音、语音朗读、朗读内容（仅标题 / 标题+摘要）、开机自启；也可注销终端后重新注册。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tut-pane" id="t2">
+      <div class="steps">
+        <div class="step">
+          <h4>打开后台</h4>
+          <p>在服务器地址后访问 <code>/admin</code>（入口较隐蔽——就在本页页脚的邮戳上），输入管理密码登录。</p>
+        </div>
+        <div class="step">
+          <h4>管理终端</h4>
+          <p>「终端管理」页查看在线状态、最近连接时间，可手动新建/注销/恢复终端，点击「消息中心」可直接查看某终端的消息。</p>
+        </div>
+        <div class="step">
+          <h4>发放 API 密钥</h4>
+          <p>「API 密钥」页为业务系统创建密钥（可随时吊销）；「发送消息」页可向任意终端直接推送测试消息。</p>
+        </div>
+        <div class="step">
+          <h4>审计消息</h4>
+          <p>「消息记录」页按终端/已读状态筛选，完整呈现创建、送达、阅读、删除全链路时间。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tut-pane" id="t3">
+      <div class="steps">
+        <div class="step">
+          <h4>申请密钥</h4>
+          <p>请管理员在后台「API 密钥」页创建一枚密钥，格式形如 <code>dd_3f2a…</code>，等同于推送权限，请妥善保管。</p>
+        </div>
+        <div class="step">
+          <h4>调用推送接口</h4>
+          <p>一个 POST 即可推送；<code>terminal_code</code> 换成 <code>terminal_codes</code> 数组即群发。</p>
+          <div class="codeblock">curl -X POST http://<span class="k">服务器IP</span>:8000/api/messages \<br>&nbsp; -H <span class="s">"Content-Type: application/json"</span> \<br>&nbsp; -H <span class="s">"X-API-Key: dd_你的密钥"</span> \<br>&nbsp; -d <span class="s">'{"terminal_code":"A2B3C4","title":"工单提醒","content":"新的紧急工单待处理","sender":"OA系统"}'</span></div>
+        </div>
+        <div class="step">
+          <h4>阅读回执</h4>
+          <p>响应中的 <code>delivered</code> 表示是否实时送达；<code>false</code> 并非失败——终端上线后自动补发，无需重发。</p>
+        </div>
+        <div class="step">
+          <h4>更多示例</h4>
+          <p>Python / C# / JavaScript 完整示例与错误码说明，见<a href="#api">接口文档</a>或下载完整文档。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 接口文档 ================= -->
+<section id="api">
+  <div class="wrap">
+    <div class="sec-no">编号 005 / OPEN API</div>
+    <h2 class="sec-title">接口文档</h2>
+    <p class="sec-sub">—— 一纸电文，四海皆可达</p>
+    <div class="api-grid">
+      <div>
+        <table class="api-table">
+          <caption>POST /api/messages · 请求字段</caption>
+          <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+          <tr><td>terminal_code</td><td>string</td><td>单个终端编码（与 codes 二选一）</td></tr>
+          <tr><td>terminal_codes</td><td>string[]</td><td>终端编码数组，一条消息群发</td></tr>
+          <tr><td>title</td><td>string</td><td>标题，1–200 字，弹窗与朗读优先展示</td></tr>
+          <tr><td>content</td><td>string</td><td>内容，纯文本 ≤ 20000 字，支持换行</td></tr>
+          <tr><td>sender</td><td>string</td><td>发送方名称，建议填业务系统名</td></tr>
+        </table>
+        <div class="status-row">
+          <span><b>200</b> 送达/已入库</span>
+          <span><b>401</b> 缺少密钥</span>
+          <span><b>403</b> 密钥无效</span>
+          <span><b>422</b> 参数错误</span>
+        </div>
+      </div>
+      <div class="api-side">
+        <div class="codeblock"><span class="c"># 请求头必须携带 API Key</span><br>POST /api/messages HTTP/1.1<br>Host: <span class="k">服务器IP:8000</span><br>Content-Type: application/json<br>X-API-Key: <span class="s">dd_3f2a1b…</span></div>
+        <div class="codeblock"><span class="c"># 响应：逐终端回执</span><br>{<br>&nbsp; <span class="k">"total"</span>: 2, <span class="k">"delivered"</span>: 1,<br>&nbsp; <span class="k">"results"</span>: [<br>&nbsp;&nbsp;&nbsp; {<span class="k">"terminal_code"</span>:<span class="s">"A2B3C4"</span>, <span class="k">"message_id"</span>:101, <span class="k">"delivered"</span>:true},<br>&nbsp;&nbsp;&nbsp; {<span class="k">"terminal_code"</span>:<span class="s">"X9Y8Z7"</span>, <span class="k">"message_id"</span>:102, <span class="k">"delivered"</span>:false,<br>&nbsp;&nbsp;&nbsp;&nbsp; <span class="k">"error"</span>:<span class="s">"终端不在线，已入库等待补发"</span>}<br>&nbsp; ]<br>}</div>
+        <div class="api-more">
+          <a class="btn" href="/download/dingdong-api-doc.md">下载完整接入文档</a>
+          <span class="note">含 curl / Python / C# / JS 示例与 FAQ</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 页脚 ================= -->
+<footer>
+  <div class="wrap">
+    <a class="postmark-link" href="/admin" aria-label=".">
+      <svg width="92" height="92" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="55" fill="none" stroke="#41506b" stroke-width="2.5"/>
+        <circle cx="60" cy="60" r="44" fill="none" stroke="#41506b" stroke-width="1.5"/>
+        <path id="pmf" d="M60,60 m-33,0 a33,33 0 1,1 66,0 a33,33 0 1,1 -66,0" fill="none"/>
+        <text font-size="10.5" letter-spacing="2.5" fill="#41506b" font-family="monospace">
+          <textPath href="#pmf">DINGDONG POST OFFICE · KEEP DELIVERING ·</textPath>
+        </text>
+        <text x="60" y="64" text-anchor="middle" font-size="16" fill="#41506b" font-family="KaiTi,serif" letter-spacing="4">叮咚驿站</text>
+      </svg>
+    </a>
+    <div class="copy">
+      叮咚消息推送系统<span class="sep">·</span>数据不出内网<span class="sep">·</span>© 2026
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // 下载信息
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/api/download/info", true);
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState !== 4) return;
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d.available) {
+        document.getElementById("dlVer").textContent = d.version || "v1.0";
+        document.getElementById("dlSize").textContent = d.size_text;
+        document.getElementById("dlDate").textContent = d.updated_at;
+      } else {
+        document.getElementById("dlInfo").innerHTML = "安装包暂未就绪，请联系管理员放入下载目录";
+        document.getElementById("dlBtn").style.display = "none";
+      }
+    } catch (e) {}
+  };
+  xhr.send();
+
+  // 教程选项卡
+  var tabs = document.querySelectorAll(".tut-tab");
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].onclick = function () {
+      document.querySelector(".tut-tab.on").className = "tut-tab";
+      this.className = "tut-tab on";
+      document.querySelector(".tut-pane.on").className = "tut-pane";
+      document.getElementById(this.getAttribute("data-t")).className = "tut-pane on";
+    };
+  }
+
+  // 滚动渐显
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.className += " in"; io.unobserve(en.target); }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+  } else {
+    document.querySelectorAll(".reveal").forEach(function (el) { el.className += " in"; });
+  }
+})();
+</script>
+</body>
+</html>

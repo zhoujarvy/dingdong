@@ -1,0 +1,27 @@
+# Python
+server/venv/
+server/__pycache__/
+server/app/__pycache__/
+*.pyc
+
+# 数据库与本地配置（含管理员密码，勿入库）
+server/config.json
+server/dingdong.db
+server/dingdong.db-shm
+server/dingdong.db-wal
+
+# Node / 前端构建产物（由 web 构建生成）
+web/node_modules/
+server/static/
+
+# .NET 构建产物
+client/DingDong/bin/
+client/DingDong/obj/
+
+# 分发安装包
+server/site/downloads/
+
+# IDE
+.vs/
+.vscode/
+.idea/
