@@ -2,7 +2,7 @@
 
 通用消息推送系统：第三方程序通过 HTTP 接口推送消息，Windows 客户端驻留系统托盘实时接收（提示音 / TTS 朗读 / 右下角弹窗），点击弹窗打开**网页消息中心**查看全文。
 
-- **官网**：服务启动后访问 `http://服务器IP:8000/`——系统介绍、客户端下载、使用教程与接口文档（单文件页面，位于 `server/site/`）
+- **官网**：服务启动后访问 `http://服务器IP:8000/`——系统介绍、客户端下载、使用教程与接口文档（`web/site.html`，随管理后台一起构建）
 - **管理后台**：`http://服务器IP:8000/admin`（官网页脚的邮戳即隐蔽入口），密码在 `server/config.json`
 - 客户端仅负责接收提醒（托盘未读角标 + 弹窗），消息的查看 / 已读 / 删除统一在网页消息中心进行，按今天 / 昨天 / 近 3 天 / 近 7 天分组折叠，更早消息走「历史记录」分页查询
 - 文档：**[docs/系统技术文档.md](docs/系统技术文档.md)**（架构/数据库/协议/全量 API，面向维护者）、**[docs/第三方接入文档.md](docs/第三方接入文档.md)**（面向第三方调用方，含 curl / Python / C# / JS 示例，也可从官网下载）
@@ -43,7 +43,7 @@ cd client
 make_installer.bat
 ```
 
-一键完成「编译 → Inno Setup 打包 → 输出到 `server/site/downloads/DingDongSetup.exe` → 写入版本号 version.txt（官网下载区自动展示版本/大小/日期）」。需要本机安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)。
+一键完成「编译 → Inno Setup 打包 → 输出到 `server/downloads/DingDongSetup.exe` → 写入版本号 version.txt（官网下载区自动展示版本/大小/日期）」。需要本机安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)。
 
 客户端为 .NET 6 自包含发布，运行时已打包在安装包内，目标机器无需任何额外安装。
 

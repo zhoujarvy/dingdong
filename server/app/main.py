@@ -75,9 +75,9 @@ async def on_startup():
 
 
 # ---------- 静态资源：官网（/）、管理后台（/admin）、下载 ----------
-STATIC_DIR = os.path.join(config.BASE_DIR, "static")       # Vue 管理后台构建产物
-SITE_DIR = os.path.join(config.BASE_DIR, "site")           # 官网（单文件介绍页）
-DOWNLOADS_DIR = os.path.join(SITE_DIR, "downloads")        # 客户端安装包等下载物
+# 官网（site.html）与管理后台（index.html）均在 web/ 中开发，npm run build 一并输出到 static/
+STATIC_DIR = os.path.join(config.BASE_DIR, "static")
+DOWNLOADS_DIR = os.path.join(config.BASE_DIR, "downloads")  # 客户端安装包等下载物
 ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
 
 if os.path.isdir(ASSETS_DIR):
@@ -131,7 +131,7 @@ def download_file(filename: str):
 
 @app.get("/", response_class=HTMLResponse)
 def site_index():
-    page = _file(SITE_DIR, "index.html")
+    page = _file(STATIC_DIR, "site.html")
     if page:
         return page
     admin = _file(STATIC_DIR, "index.html")
@@ -160,7 +160,7 @@ def spa_fallback(full_path: str):
     candidate = os.path.normpath(os.path.join(STATIC_DIR, full_path))
     if candidate.startswith(STATIC_DIR) and os.path.isfile(candidate):
         return FileResponse(candidate)
-    page = _file(SITE_DIR, "index.html")
+    page = _file(STATIC_DIR, "site.html")
     if page:
         return page
     path = os.path.join(STATIC_DIR, "index.html")

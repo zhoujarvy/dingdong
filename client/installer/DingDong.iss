@@ -6,7 +6,7 @@
 #define MyAppNameFull "叮咚消息推送客户端"
 #define MyAppExeName "DingDong.exe"
 #define MyAppSrc "..\DingDong\bin\Release\net6.0-windows\win-x64\publish\DingDong.exe"
-#define MyOutputDir "..\..\server\site\downloads"
+#define MyOutputDir "..\..\server\downloads"
 #ifndef MyAppVersion
 #define MyAppVersion GetVersionNumbersString(MyAppSrc)
 #endif
@@ -24,7 +24,7 @@ OutputBaseFilename=DingDongSetup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64
+ArchitecturesAllowed=x64compatible
 CloseApplications=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ; 版本信息

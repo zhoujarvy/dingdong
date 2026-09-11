@@ -19,7 +19,7 @@ npm run dev      # 开发模式 http://localhost:5173（/api、/ws 代理到 127
 npm run build    # 构建产物输出到 server/static（emptyOutDir），由服务端托管
 
 # 客户端（C# WPF，.NET 6 自包含单文件发布，目标机免装运行时）
-cd client && make_installer.bat   # dotnet publish → Inno Setup → server/site/downloads/DingDongSetup.exe + version.txt
+cd client && make_installer.bat   # dotnet publish → Inno Setup → server/downloads/DingDongSetup.exe + version.txt
 dotnet publish DingDong/DingDong.csproj -c Release    # 仅编译，产物约 66MB 单文件 exe
 
 # 测试（服务端）
@@ -32,7 +32,7 @@ cd server && python test_inbox.py  # 收件箱分页测试
 三个模块，关键数据流：
 
 - **server/**（FastAPI，单进程）
-  - `app/main.py`：应用入口与路由挂载。`/` 官网（`server/site/index.html` 单文件页）、`/admin` Vue 管理后台 SPA（`server/static`，路径 `/admin/{rest}` 回退 index.html）、`/download/{filename}` 客户端安装包分发
+  - `app/main.py`：应用入口与路由挂载。官网 `site.html` 与管理后台 `index.html` 均在 `web/` 开发，`npm run build` 一并输出到 `server/static`；`/` 服务端返回 site.html，`/admin/{rest}` 回退 SPA index.html、`/download/{filename}` 客户端安装包分发
   - `app/routes_public.py`：第三方推送 API（`X-API-Key` 认证）+ 网页消息中心/消息全文页的匿名 JSON API（token 认证）
   - `app/routes_admin.py`：管理后台 API（密码认证，配置在 `server/config.json` 的 `admin_password`）
   - `app/ws.py`：核心 `ConnectionManager`（code → WebSocket 字典，同码重连踢旧连接 close 4400）。协议为**双向 JSON**：服务端推 `hello`/`messages`/`data`，客户端发 `list`/心跳/已读/删除上报

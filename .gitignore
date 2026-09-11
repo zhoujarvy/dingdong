@@ -19,7 +19,7 @@ client/DingDong/bin/
 client/DingDong/obj/
 
 # 分发安装包
-server/site/downloads/
+server/downloads/
 
 # IDE
 .vs/
