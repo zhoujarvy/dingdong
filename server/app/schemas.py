@@ -22,6 +22,12 @@ class TerminalInfo(BaseModel):
     inbox_token: str
 
 
+class TerminalLoginRequest(BaseModel):
+    """客户端登录已有终端：编码 + 名称双重验证（换机重登场景）。"""
+    code: str = Field(..., min_length=6, max_length=6)
+    name: str = Field(..., min_length=1, max_length=50)
+
+
 class UnregisterRequest(BaseModel):
     """客户端自助注销：终端编码 + 消息中心令牌。"""
     code: str = Field(..., min_length=6, max_length=6)
@@ -56,6 +62,11 @@ class PushResultItem(BaseModel):
     message_id: Optional[int] = None
     delivered: bool = False
     error: Optional[str] = None
+
+
+class BatchDeleteRequest(BaseModel):
+    """管理后台消息批量删除（物理删除）。"""
+    ids: List[int] = Field(..., min_length=1, max_length=1000)
 
 
 class PushResponse(BaseModel):

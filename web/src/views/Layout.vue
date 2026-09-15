@@ -4,17 +4,23 @@
       <div class="logo">🔔 叮咚</div>
       <el-menu :default-active="$route.path" router background-color="#001529"
                text-color="#a6adb4" active-text-color="#ffffff">
-        <el-menu-item index="/overview">📊 总览</el-menu-item>
-        <el-menu-item index="/terminals">💻 终端管理</el-menu-item>
-        <el-menu-item index="/messages">📨 消息记录</el-menu-item>
-        <el-menu-item index="/apikeys">🔑 API 密钥</el-menu-item>
+        <template v-if="role !== 'oper'">
+          <el-menu-item index="/overview">📊 总览</el-menu-item>
+          <el-menu-item index="/terminals">💻 终端管理</el-menu-item>
+          <el-menu-item index="/messages">📨 消息记录</el-menu-item>
+          <el-menu-item index="/apikeys">🔑 API 密钥</el-menu-item>
+        </template>
         <el-menu-item index="/push">📤 发送消息</el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
       <el-header class="header">
         <span class="crumb">{{ $route.meta.title }}</span>
-        <el-button link @click="logout">退出登录</el-button>
+        <span class="role-tag">
+          <el-tag v-if="role === 'oper'" type="warning" size="small">操作员</el-tag>
+          <el-tag v-else type="primary" size="small" effect="plain">管理员</el-tag>
+          <el-button link @click="logout">退出登录</el-button>
+        </span>
       </el-header>
       <el-main style="background:#f0f2f5">
         <router-view />
@@ -25,9 +31,10 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { clearToken } from '../auth'
+import { clearToken, getRole } from '../auth'
 
 const router = useRouter()
+const role = getRole()
 function logout() {
   clearToken()
   router.push('/login')
@@ -46,4 +53,5 @@ function logout() {
   background: #fff; border-bottom: 1px solid #ebeef5;
 }
 .crumb { font-size: 15px; font-weight: 600; }
+.role-tag { display: flex; align-items: center; gap: 12px; }
 </style>

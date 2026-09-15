@@ -9,6 +9,7 @@ DEFAULTS = {
     "host": "0.0.0.0",
     "port": 8000,
     "admin_password": "admin123",
+    "oper_password": "",           # 操作员密码（仅能登录后台发送消息，留空则不启用）
     "database": "dingdong.db",
     "terminal_offline_days": 30,   # 终端超过该天数未连接则自动注销
 }

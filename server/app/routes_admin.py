@@ -7,6 +7,7 @@ from . import db, security
 from .schemas import (
     AdminPushRequest,
     ApiKeyCreate,
+    BatchDeleteRequest,
     LoginRequest,
     MessagePushRequest,
     TerminalCreateRequest,
@@ -22,17 +23,23 @@ from .utils import (
 from .ws import kick_terminal, manager
 
 router = APIRouter(prefix="/api/admin", dependencies=[Depends(security.require_admin)])
+# 管理员专属路由：操作员（oper）登录后仅能访问 router 上的 /push
+admin_router = APIRouter(
+    prefix="/api/admin",
+    dependencies=[Depends(security.require_admin), Depends(security.admin_only)],
+)
 
 
 # ---------- 登录（无需 token，单独挂载在 main） ----------
 def login_route(req: LoginRequest):
-    if not security.verify_password(req.password):
+    role = security.login_role(req.password)
+    if role is None:
         raise HTTPException(status_code=401, detail="密码错误")
-    return {"token": security.create_session()}
+    return {"token": security.create_session(role), "role": role}
 
 
 # ---------- 总览 ----------
-@router.get("/overview")
+@admin_router.get("/overview")
 def overview():
     total = db.query_one("SELECT COUNT(*) AS c FROM terminals WHERE status='active'")["c"]
     online = len(manager.online_codes())
@@ -61,7 +68,7 @@ def _terminal_row(t: dict) -> dict:
     return t
 
 
-@router.get("/terminals")
+@admin_router.get("/terminals")
 def list_terminals(status: str = "", page: int = 1, page_size: int = 20):
     where, params = "", []
     if status in ("active", "revoked"):
@@ -76,7 +83,7 @@ def list_terminals(status: str = "", page: int = 1, page_size: int = 20):
             "items": [_terminal_row(r) for r in rows]}
 
 
-@router.post("/terminals")
+@admin_router.post("/terminals")
 def create_terminal(req: TerminalCreateRequest):
     code = None
     for _ in range(20):
@@ -94,7 +101,7 @@ def create_terminal(req: TerminalCreateRequest):
     return {"id": tid, "code": code, "name": req.name}
 
 
-@router.post("/terminals/{terminal_id}/revoke")
+@admin_router.post("/terminals/{terminal_id}/revoke")
 async def revoke_terminal(terminal_id: int):
     t = db.query_one("SELECT * FROM terminals WHERE id = ?", (terminal_id,))
     if not t:
@@ -108,7 +115,7 @@ async def revoke_terminal(terminal_id: int):
     return {"ok": True}
 
 
-@router.post("/terminals/{terminal_id}/restore")
+@admin_router.post("/terminals/{terminal_id}/restore")
 async def restore_terminal(terminal_id: int):
     t = db.query_one("SELECT * FROM terminals WHERE id = ?", (terminal_id,))
     if not t:
@@ -122,7 +129,7 @@ async def restore_terminal(terminal_id: int):
 
 
 # ---------- 消息记录 ----------
-@router.get("/messages")
+@admin_router.get("/messages")
 def list_messages(terminal_id: int = 0, read: str = "", page: int = 1, page_size: int = 20):
     where, params = ["1=1"], []
     if terminal_id:
@@ -146,8 +153,18 @@ def list_messages(terminal_id: int = 0, read: str = "", page: int = 1, page_size
             "items": rows}
 
 
+@admin_router.post("/messages/batch-delete")
+def batch_delete_messages(req: BatchDeleteRequest):
+    """管理员批量删除消息（物理删除，不可恢复）。"""
+    q = ",".join("?" * len(req.ids))
+    conn = db._conn()
+    cur = conn.execute(f"DELETE FROM messages WHERE id IN ({q})", tuple(req.ids))
+    conn.commit()
+    return {"deleted": cur.rowcount}
+
+
 # ---------- API 密钥 ----------
-@router.get("/apikeys")
+@admin_router.get("/apikeys")
 def list_apikeys():
     rows = db.query(
         "SELECT * FROM api_keys ORDER BY id DESC"
@@ -157,7 +174,7 @@ def list_apikeys():
     return {"items": rows}
 
 
-@router.post("/apikeys")
+@admin_router.post("/apikeys")
 def create_apikey(req: ApiKeyCreate):
     kid = db.execute(
         "INSERT INTO api_keys (name, key, created_at) VALUES (?,?,?)",
@@ -166,7 +183,7 @@ def create_apikey(req: ApiKeyCreate):
     return db.query_one("SELECT * FROM api_keys WHERE id = ?", (kid,))
 
 
-@router.post("/apikeys/{key_id}/revoke")
+@admin_router.post("/apikeys/{key_id}/revoke")
 def revoke_apikey(key_id: int):
     k = db.query_one("SELECT * FROM api_keys WHERE id = ?", (key_id,))
     if not k:

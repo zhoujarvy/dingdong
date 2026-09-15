@@ -31,6 +31,7 @@ namespace DingDong.Services
                             TtsEnabled = Json.GetBool(dict, "TtsEnabled", false),
                             TtsMode = Json.GetStr(dict, "TtsMode", "title"),
                             AutoStart = Json.GetBool(dict, "AutoStart", false),
+                            LoggedOut = Json.GetBool(dict, "LoggedOut", false),
                         };
                     }
                 }
@@ -52,6 +53,7 @@ namespace DingDong.Services
                 { "TtsEnabled", s.TtsEnabled },
                 { "TtsMode", s.TtsMode ?? "title" },
                 { "AutoStart", s.AutoStart },
+                { "LoggedOut", s.LoggedOut },
             }));
         }
 
@@ -61,6 +63,7 @@ namespace DingDong.Services
             settings.TerminalCode = "";
             settings.TerminalName = "";
             settings.InboxToken = "";
+            settings.LoggedOut = false;
             Save(settings);
         }
     }

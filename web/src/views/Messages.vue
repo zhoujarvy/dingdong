@@ -13,10 +13,17 @@
           <el-option value="read" label="已读" />
         </el-select>
       </div>
-      <el-button :loading="loading" @click="load">刷新</el-button>
+      <div>
+        <el-button type="danger" plain :disabled="!selection.length" @click="batchDelete">
+          删除选中{{ selection.length ? `（${selection.length}）` : '' }}
+        </el-button>
+        <el-button :loading="loading" @click="load">刷新</el-button>
+      </div>
     </div>
 
-    <el-table :data="items" v-loading="loading" stripe>
+    <el-table :data="items" v-loading="loading" stripe
+              @selection-change="selection = $event">
+      <el-table-column type="selection" width="44" />
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column label="终端" width="170">
         <template #default="{ row }">
@@ -53,6 +60,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api'
 
 const route = useRoute()
@@ -64,6 +72,7 @@ const pageSize = 20
 const terminalId = ref(Number(route.query.terminal_id) || null)
 const readFilter = ref('')
 const loading = ref(false)
+const selection = ref([])
 
 async function load() {
   loading.value = true
@@ -85,6 +94,22 @@ async function load() {
 
 function openMsg(row) {
   window.open(`/m/${row.id}?token=${row.access_token}`, '_blank')
+}
+
+async function batchDelete() {
+  const ids = selection.value.map((r) => r.id)
+  try {
+    await ElMessageBox.confirm(
+      `确定永久删除选中的 ${ids.length} 条消息？此为物理删除，不可恢复（用户消息中心也将不再显示）。`,
+      '批量删除',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  const data = await http.post('/admin/messages/batch-delete', { ids })
+  ElMessage.success(`已删除 ${data.deleted} 条`)
+  load()
 }
 
 onMounted(async () => {

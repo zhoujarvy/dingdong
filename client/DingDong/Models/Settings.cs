@@ -13,6 +13,8 @@ namespace DingDong.Models
         /// <summary>"title"=仅朗读标题；"both"=朗读标题+内容摘要</summary>
         public string TtsMode { get; set; } = "title";
         public bool AutoStart { get; set; } = false;
+        /// <summary>已退出登录（本地保留编码，换机后可凭编码重新登录）。</summary>
+        public bool LoggedOut { get; set; } = false;
 
         [System.Xml.Serialization.XmlIgnore]
         public bool Registered

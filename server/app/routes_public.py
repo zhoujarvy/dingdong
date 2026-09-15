@@ -10,6 +10,7 @@ from .schemas import (
     PushResultItem,
     RegisterRequest,
     TerminalInfo,
+    TerminalLoginRequest,
     UnregisterRequest,
 )
 from .security import require_api_key
@@ -42,6 +43,21 @@ def register_terminal(req: RegisterRequest):
     log.info("新终端注册: %s -> %s", req.name, code)
     row = db.query_one("SELECT * FROM terminals WHERE id = ?", (tid,))
     return TerminalInfo(code=code, name=req.name, inbox_token=row["inbox_token"])
+
+
+@router.post("/terminals/login", response_model=TerminalInfo)
+def login_terminal(req: TerminalLoginRequest):
+    """客户端登录已有终端：编码 + 名称双重验证（防止仅凭编码冒登他人终端）。"""
+    terminal = db.query_one("SELECT * FROM terminals WHERE code = ?", (req.code.strip().upper(),))
+    if not terminal:
+        raise HTTPException(status_code=404, detail="终端编码不存在")
+    if terminal["status"] != "active":
+        raise HTTPException(status_code=403, detail="该终端已注销，无法登录")
+    if terminal["name"] != req.name.strip():
+        raise HTTPException(status_code=403, detail="终端名称不匹配")
+    log.info("终端登录: %s(%s)", terminal["name"], terminal["code"])
+    return TerminalInfo(code=terminal["code"], name=terminal["name"],
+                        inbox_token=terminal["inbox_token"])
 
 
 @router.post("/messages", response_model=PushResponse)

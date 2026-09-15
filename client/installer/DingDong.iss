@@ -21,6 +21,7 @@ DefaultGroupName={#MyAppNameFull}
 PrivilegesRequired=lowest
 OutputDir={#MyOutputDir}
 OutputBaseFilename=DingDongSetup
+SetupIconFile=..\DingDong\Assets\app.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

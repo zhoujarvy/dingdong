@@ -22,7 +22,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../api'
-import { setToken } from '../auth'
+import { setRole, setToken } from '../auth'
 
 const router = useRouter()
 const password = ref('')
@@ -34,7 +34,8 @@ async function submit() {
   try {
     const data = await http.post('/admin/login', { password: password.value })
     setToken(data.token)
-    router.push('/')
+    setRole(data.role || 'admin')
+    router.push(data.role === 'oper' ? '/push' : '/')
   } finally {
     loading.value = false
   }

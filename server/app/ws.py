@@ -19,45 +19,45 @@ INBOX_LIMIT = 200  # 客户端/消息中心拉取列表的最大条数
 
 
 class ConnectionManager:
+    """同一终端允许多条连接并存（多台电脑同时登录同一编码，各自收到推送）。"""
+
     def __init__(self):
-        self.active: dict = {}  # code -> WebSocket
+        self.active: dict = {}  # code -> list[WebSocket]
         self.lock = asyncio.Lock()
 
-    async def connect(self, code: str, ws: WebSocket) -> bool:
-        """注册连接；同一终端重复连接时踢掉旧连接。返回是否首次注册。"""
+    async def connect(self, code: str, ws: WebSocket) -> None:
         async with self.lock:
-            old = self.active.get(code)
-            self.active[code] = ws
-        if old is not None and old is not ws:
-            try:
-                await old.close(code=4400, reason="replaced")
-            except Exception:
-                pass
-            return False
-        return True
+            conns = self.active.setdefault(code, [])
+            if ws not in conns:
+                conns.append(ws)
 
     async def disconnect(self, code: str, ws: WebSocket) -> None:
         async with self.lock:
-            if self.active.get(code) is ws:
-                del self.active[code]
+            conns = self.active.get(code)
+            if conns and ws in conns:
+                conns.remove(ws)
+                if not conns:
+                    del self.active[code]
 
     def is_online(self, code: str) -> bool:
-        return code in self.active
+        return bool(self.active.get(code))
 
     def online_codes(self) -> list:
         return list(self.active.keys())
 
     async def send_to_terminal(self, code: str, payload: dict) -> bool:
-        """向指定终端发送 JSON，返回是否送达。"""
-        ws = self.active.get(code)
-        if ws is None:
+        """向该终端的所有在线连接广播 JSON，至少送达一条即返回 True。"""
+        conns = list(self.active.get(code) or [])
+        if not conns:
             return False
-        try:
-            await ws.send_json(payload)
-            return True
-        except Exception:
-            await self.disconnect(code, ws)
-            return False
+        delivered = False
+        for ws in conns:
+            try:
+                await ws.send_json(payload)
+                delivered = True
+            except Exception:
+                await self.disconnect(code, ws)
+        return delivered
 
 
 manager = ConnectionManager()
@@ -110,19 +110,17 @@ async def deliver_message(message_id: int, terminal: dict) -> bool:
 
 
 async def deliver_pending(terminal: dict) -> None:
-    """连接后补发所有未删除的消息（含未送达与已送达未删除的）。"""
+    """连接后仅补发「尚未推送过」的消息（未读/已读过的历史由网页消息中心查看）。"""
     rows = db.query(
         "SELECT * FROM messages WHERE terminal_id = ? AND deleted_at IS NULL "
-        "ORDER BY id DESC LIMIT ?",
-        (terminal["id"], INBOX_LIMIT),
+        "AND pushed_at IS NULL ORDER BY id ASC",
+        (terminal["id"],),
     )
-    for row in reversed(rows):  # 按时间正序下发
-        if not row["pushed_at"]:
-            db.execute(
-                "UPDATE messages SET pushed_at = ? WHERE id = ? AND pushed_at IS NULL",
-                (now_str(), row["id"]),
-            )
-            row["pushed_at"] = now_str()
+    for row in rows:
+        db.execute(
+            "UPDATE messages SET pushed_at = ? WHERE id = ? AND pushed_at IS NULL",
+            (now_str(), row["id"]),
+        )
         try:
             await manager.send_to_terminal(terminal["code"], _message_payload(row, terminal))
         except Exception:
@@ -215,9 +213,8 @@ async def terminal_ws(ws: WebSocket, code: str):
 
 
 async def kick_terminal(code: str) -> None:
-    """注销终端时断开其连接。"""
-    ws = manager.active.get(code)
-    if ws is not None:
+    """注销终端时断开其全部连接。"""
+    for ws in list(manager.active.get(code) or []):
         try:
             await ws.close(code=CLOSE_TERMINAL_REVOKED, reason="终端已注销")
         except Exception:

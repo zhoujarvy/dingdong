@@ -9,7 +9,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config, db
-from .routes_admin import login_route, router as admin_router
+from .routes_admin import login_route
+from .routes_admin import admin_router, router as admin_push_router
 from .routes_public import router as public_router
 from .page_message import router as page_router
 from .page_inbox import router as inbox_router
@@ -35,6 +36,7 @@ app.add_middleware(
 
 app.include_router(public_router)
 app.include_router(admin_router)
+app.include_router(admin_push_router)
 app.include_router(page_router)
 app.include_router(inbox_router)
 app.include_router(ws_router)

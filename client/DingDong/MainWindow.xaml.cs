@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -31,7 +32,7 @@ namespace DingDong
 
             NotifyManager.Init(this);
 
-            if (_settings.Registered)
+            if (_settings.Registered && !_settings.LoggedOut)
             {
                 ShowMainPanel();
                 if (startMinimized)
@@ -46,7 +47,12 @@ namespace DingDong
             }
             else
             {
-                TxtServerUrl.Text = string.IsNullOrEmpty(_settings.ServerUrl) ? "http://" : _settings.ServerUrl;
+                FillServerBoxes(_settings.ServerUrl);
+                if (_settings.LoggedOut && !string.IsNullOrEmpty(_settings.TerminalCode))
+                {
+                    // 退出登录后再启动：预填编码，直接进入登录模式
+                    SetLoginMode(true);
+                }
                 RegisterPanel.Visibility = Visibility.Visible;
                 MainPanel.Visibility = Visibility.Collapsed;
                 Show();
@@ -67,7 +73,53 @@ namespace DingDong
             if (_settings.Registered) StartWs();
         }
 
-        // ================= 注册 =================
+        // ================= 注册 / 登录 =================
+
+        /// <summary>把 ServerUrl 拆成地址与端口填入输入框。</summary>
+        private void FillServerBoxes(string serverUrl)
+        {
+            var host = (serverUrl ?? "").Trim().TrimEnd('/');
+            if (host.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) host = host.Substring(7);
+            if (host.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) host = host.Substring(8);
+            var port = "";
+            var idx = host.LastIndexOf(':');
+            if (idx >= 0)
+            {
+                port = host.Substring(idx + 1);
+                if (port.All(char.IsDigit) && port.Length > 0) host = host.Substring(0, idx);
+                else port = "";
+            }
+            TxtServerHost.Text = string.IsNullOrEmpty(host) ? "127.0.0.1" : host;
+            TxtServerPort.Text = string.IsNullOrEmpty(port) ? "80" : port;
+        }
+
+        /// <summary>由地址 + 端口输入框拼出服务器 URL。</summary>
+        private string ServerUrlFromBoxes()
+        {
+            var host = TxtServerHost.Text.Trim().Trim().TrimEnd('/');
+            var port = TxtServerPort.Text.Trim();
+            return "http://" + host + (string.IsNullOrEmpty(port) || port == "80" ? "" : ":" + port);
+        }
+
+        private void SetLoginMode(bool login)
+        {
+            TbNameLabel.Visibility = login ? Visibility.Collapsed : Visibility.Visible;
+            TxtTerminalName.Visibility = login ? Visibility.Collapsed : Visibility.Visible;
+            TbCodeLabel.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
+            TxtLoginCode.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
+            TbLoginNameLabel.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
+            TxtLoginName.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
+            BtnRegister.Visibility = login ? Visibility.Collapsed : Visibility.Visible;
+            BtnLogin.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
+            TbModeSwitch.Text = login ? "没有编码？点此注册新终端" : "已有终端编码？点此登录";
+            TbRegisterTip.Text = login ? "输入终端编码与名称登录，需与注册时一致" : "注册后将获得一个 6 位终端编码，请妥善保存";
+        }
+
+        private void TbModeSwitch_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            SetLoginMode(BtnLogin.Visibility != Visibility.Visible);
+        }
+
         private async void BtnRegister_Click(object sender, RoutedEventArgs e) => await RegisterAsync();
 
         private async void TxtTerminalName_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -75,11 +127,18 @@ namespace DingDong
             if (e.Key == System.Windows.Input.Key.Enter) await RegisterAsync();
         }
 
+        private async void BtnLogin_Click(object sender, RoutedEventArgs e) => await LoginAsync();
+
+        private async void TxtLoginCode_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter) await LoginAsync();
+        }
+
         private async System.Threading.Tasks.Task RegisterAsync()
         {
-            var server = TxtServerUrl.Text.Trim().TrimEnd('/');
+            var server = ServerUrlFromBoxes();
             var name = TxtTerminalName.Text.Trim();
-            if (!server.StartsWith("http")) { TbRegisterTip.Text = "服务器地址需以 http:// 开头"; return; }
+            if (string.IsNullOrEmpty(TxtServerHost.Text.Trim())) { TbRegisterTip.Text = "请输入服务器地址"; return; }
             if (name.Length == 0) { TbRegisterTip.Text = "请输入终端名称"; return; }
 
             BtnRegister.IsEnabled = false;
@@ -88,11 +147,7 @@ namespace DingDong
             {
                 var result = await System.Threading.Tasks.Task.Run(
                     () => ApiClient.Register(server, name));
-                _settings.ServerUrl = server;
-                _settings.TerminalCode = Convert.ToString(result["code"]);
-                _settings.TerminalName = Convert.ToString(result["name"]);
-                _settings.InboxToken = Convert.ToString(result["inbox_token"]);
-                SettingsStore.Save(_settings);
+                ApplyIdentity(server, result);
                 _unread = 0;
                 ShowMainPanel();
                 StartWs();
@@ -107,6 +162,47 @@ namespace DingDong
             }
         }
 
+        private async System.Threading.Tasks.Task LoginAsync()
+        {
+            var server = ServerUrlFromBoxes();
+            var code = TxtLoginCode.Text.Trim().ToUpper();
+            var name = TxtLoginName.Text.Trim();
+            if (string.IsNullOrEmpty(TxtServerHost.Text.Trim())) { TbRegisterTip.Text = "请输入服务器地址"; return; }
+            if (code.Length != 6) { TbRegisterTip.Text = "请输入 6 位终端编码"; return; }
+            if (name.Length == 0) { TbRegisterTip.Text = "请输入终端名称（注册时填写）"; return; }
+
+            BtnLogin.IsEnabled = false;
+            TbRegisterTip.Text = "正在登录…";
+            try
+            {
+                var result = await System.Threading.Tasks.Task.Run(
+                    () => ApiClient.Login(server, code, name));
+                ApplyIdentity(server, result);
+                _unread = 0;
+                ShowMainPanel();
+                StartWs();
+            }
+            catch (Exception ex)
+            {
+                TbRegisterTip.Text = "登录失败：" + ex.Message;
+            }
+            finally
+            {
+                BtnLogin.IsEnabled = true;
+            }
+        }
+
+        /// <summary>注册/登录成功后，落地终端身份信息。</summary>
+        private void ApplyIdentity(string server, System.Collections.Generic.Dictionary<string, object> result)
+        {
+            _settings.ServerUrl = server;
+            _settings.TerminalCode = Convert.ToString(result["code"]);
+            _settings.TerminalName = Convert.ToString(result["name"]);
+            _settings.InboxToken = Convert.ToString(result["inbox_token"]);
+            _settings.LoggedOut = false;
+            SettingsStore.Save(_settings);
+        }
+
         private void ShowMainPanel()
         {
             RegisterPanel.Visibility = Visibility.Collapsed;
@@ -116,7 +212,19 @@ namespace DingDong
             UpdateUnread();
 
             // 载入设置
-            TxtSettingsServer.Text = _settings.ServerUrl;
+            {
+                var host = (_settings.ServerUrl ?? "").Trim().TrimEnd('/');
+                if (host.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) host = host.Substring(7);
+                var port = "80";
+                var idx = host.LastIndexOf(':');
+                if (idx >= 0)
+                {
+                    var p = host.Substring(idx + 1);
+                    if (p.Length > 0 && p.All(char.IsDigit)) { port = p; host = host.Substring(0, idx); }
+                }
+                TxtSettingsHost.Text = host;
+                TxtSettingsPort.Text = port;
+            }
             ChkSound.IsChecked = _settings.SoundEnabled;
             ChkTts.IsChecked = _settings.TtsEnabled;
             CmbTtsMode.SelectedIndex = _settings.TtsMode == "both" ? 1 : 0;
@@ -161,6 +269,14 @@ namespace DingDong
             }
             TbStatus.Text = text;
             StatusDot.Fill = color;
+            TbStatus.Foreground = color;
+            var scb = color as System.Windows.Media.SolidColorBrush;
+            StatusPill.Background = new System.Windows.Media.SolidColorBrush
+            {
+                Color = scb != null ? scb.Color : System.Windows.Media.Colors.Gray,
+                Opacity = 0.12,
+            };
+            Title = "叮咚 - " + (_settings.Registered && !_settings.LoggedOut ? text : "未登录");
             UpdateTrayTooltip();
         }
 
@@ -188,17 +304,35 @@ namespace DingDong
                 ? "该终端已注销（超过一个月未连接、被管理员注销或已在别处注销），需要重新注册。"
                 : "该终端编码在服务器上不存在，需要重新注册。";
             MessageBox.Show(this, tip, "叮咚", MessageBoxButton.OK, MessageBoxImage.Warning);
-            BackToRegisterPanel();
+            BackToRegisterPanel(false);
         }
 
-        private void BackToRegisterPanel()
+        /// <summary>回到注册/登录面板。keepCode=true 时保留编码并切到登录模式（退出登录）；false 时清空身份（注销/被注销）。</summary>
+        private void BackToRegisterPanel(bool keepCode)
         {
-            SettingsStore.Reset(_settings);
+            if (keepCode)
+            {
+                _settings.LoggedOut = true;
+                SettingsStore.Save(_settings);
+            }
+            else
+            {
+                SettingsStore.Reset(_settings);
+                TxtTerminalName.Clear();
+            }
             _unread = 0;
             UpdateUnread();
             if (_ws != null) { _ws.Dispose(); _ws = null; }
-            TxtServerUrl.Text = string.IsNullOrEmpty(_settings.ServerUrl) ? "http://" : _settings.ServerUrl;
-            TxtTerminalName.Clear();
+            FillServerBoxes(_settings.ServerUrl);
+            SetLoginMode(keepCode);
+            if (keepCode)
+            {
+                TxtLoginCode.Text = _settings.TerminalCode;
+                TxtLoginName.Text = _settings.TerminalName;
+            }
+            TbRegisterTip.Text = keepCode
+                ? "已退出登录，编码与名称已保留，可在此或新电脑上登录"
+                : "注册后将获得一个 6 位终端编码，请妥善保存";
             RegisterPanel.Visibility = Visibility.Visible;
             MainPanel.Visibility = Visibility.Collapsed;
             Show();
@@ -254,8 +388,15 @@ namespace DingDong
             _settings.AutoStart = autoStart;
             SetAutoStart(autoStart);
 
-            var newServer = TxtSettingsServer.Text.Trim().TrimEnd('/');
-            var serverChanged = newServer != _settings.ServerUrl && newServer.StartsWith("http");
+            var newHost = TxtSettingsHost.Text.Trim().TrimEnd('/');
+            var newPort = TxtSettingsPort.Text.Trim();
+            if (newPort.Length == 0 || !newPort.All(char.IsDigit))
+            {
+                MessageBox.Show(this, "端口必须是数字", "叮咚", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var newServer = "http://" + newHost + (newPort == "80" ? "" : ":" + newPort);
+            var serverChanged = newServer != _settings.ServerUrl && newHost.Length > 0;
             if (serverChanged) _settings.ServerUrl = newServer;
             SettingsStore.Save(_settings);
 
@@ -267,9 +408,20 @@ namespace DingDong
             MessageBox.Show(this, "设置已保存", "叮咚", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        /// <summary>退出登录：仅断开本机连接，编码/名称保留，可在本机或新电脑凭编码重新登录。</summary>
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "确定退出登录？终端编码与名称将保留，可在此电脑或新电脑上凭编码重新登录。",
+                    "叮咚", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+                return;
+            BackToRegisterPanel(true);
+        }
+
         private async void BtnUnregister_Click(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show(this, "确定注销此终端？注销后将不再接收消息，需要重新注册。",
+            if (MessageBox.Show(this,
+                    "确定注销此终端？注销后编号作废、不再接收消息，且无法再登录，只能重新注册。",
                     "叮咚", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
                 return;
 
@@ -287,7 +439,7 @@ namespace DingDong
                 MessageBox.Show(this, "服务器注销失败（" + ex.Message + "），已仅清除本地信息。",
                     "叮咚", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
-            BackToRegisterPanel();
+            BackToRegisterPanel(false);
         }
 
         private void SetAutoStart(bool enable)
@@ -310,6 +462,20 @@ namespace DingDong
         }
 
         // ================= 托盘 =================
+        private System.Drawing.Icon _bellIcon;
+
+        /// <summary>共享铃铛图标（Assets/app.ico，与网页 favicon 同款），无未读时作为托盘图标。</summary>
+        private System.Drawing.Icon BellIcon()
+        {
+            if (_bellIcon == null)
+            {
+                var sri = Application.GetResourceStream(
+                    new Uri("pack://application:,,,/Assets/app.ico"));
+                _bellIcon = new System.Drawing.Icon(sri.Stream, 32, 32);
+            }
+            return _bellIcon;
+        }
+
         private void InitTray()
         {
             _tray = new WinForms.NotifyIcon
@@ -317,7 +483,7 @@ namespace DingDong
                 Visible = true,
                 Text = "叮咚",
             };
-            _trayIcon = BuildIcon(0);
+            _trayIcon = BellIcon();
             _tray.Icon = _trayIcon;
             UpdateTrayTooltip();
 
@@ -342,6 +508,7 @@ namespace DingDong
             _reallyExit = true;
             if (_ws != null) { _ws.Dispose(); _ws = null; }
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); _tray = null; }
+            if (_bellIcon != null) { _bellIcon.Dispose(); _bellIcon = null; }
             NotifyManager.CloseAll();
             TtsService.Stop();
             Application.Current.Shutdown();
@@ -356,15 +523,16 @@ namespace DingDong
 
         private void UpdateTrayIcon(int unread)
         {
-            var newIcon = BuildIcon(unread);
+            var newIcon = unread > 0 ? BuildIcon(unread) : BellIcon();
             if (_tray != null)
             {
                 var old = _trayIcon;
                 _trayIcon = newIcon;
                 _tray.Icon = newIcon;
-                if (old != null) old.Dispose();
+                // 共享铃铛图标不参与释放
+                if (old != null && old != _bellIcon) old.Dispose();
             }
-            else
+            else if (newIcon != _bellIcon)
             {
                 newIcon.Dispose();
             }

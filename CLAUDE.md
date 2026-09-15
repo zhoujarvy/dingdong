@@ -34,8 +34,8 @@ cd server && python test_inbox.py  # 收件箱分页测试
 - **server/**（FastAPI，单进程）
   - `app/main.py`：应用入口与路由挂载。官网 `site.html` 与管理后台 `index.html` 均在 `web/` 开发，`npm run build` 一并输出到 `server/static`；`/` 服务端返回 site.html，`/admin/{rest}` 回退 SPA index.html、`/download/{filename}` 客户端安装包分发
   - `app/routes_public.py`：第三方推送 API（`X-API-Key` 认证）+ 网页消息中心/消息全文页的匿名 JSON API（token 认证）
-  - `app/routes_admin.py`：管理后台 API（密码认证，配置在 `server/config.json` 的 `admin_password`）
-  - `app/ws.py`：核心 `ConnectionManager`（code → WebSocket 字典，同码重连踢旧连接 close 4400）。协议为**双向 JSON**：服务端推 `hello`/`messages`/`data`，客户端发 `list`/心跳/已读/删除上报
+  - `app/routes_admin.py`：管理后台 API（双角色密码认证：admin 全功能 / oper 仅 `/push`，配置在 `server/config.json` 的 `admin_password` 与 `oper_password`）
+  - `app/ws.py`：核心 `ConnectionManager`（code → 连接列表，同码多连接并存广播推送）。协议为**双向 JSON**：服务端推 `hello`/`messages`/`data`，客户端发 `list`/心跳/已读/删除上报
   - `app/page_inbox.py`、`app/page_message.py`：**纯 Python 字符串模板**渲染的网页消息中心与消息全文页（非前端框架），修改页面即改这两个文件
   - `app/db.py`：SQLite（WAL 模式），`server/dingdong.db`；含 `auto_revoke_loop`（30 天未连接自动注销终端）
 - **web/**：Vue 3 管理后台源码（views: Overview/Messages/Terminals/ApiKeys/Push 等），vite outDir 直接指向 `server/static`
@@ -45,7 +45,7 @@ cd server && python test_inbox.py  # 收件箱分页测试
 
 - 消息生命周期：`created_at` → `pushed_at`（WS 送达）→ `read_at`；客户端删除为**软删除**，管理后台保留审计
 - 终端不在线时消息入库，上线后补发（正序逐条标记 pushed_at）
-- WebSocket 关闭码：4400 同码顶替、4403 终端已注销、4404 终端不存在
+- WebSocket 关闭码：4403 终端已注销、4404 终端不存在；同一编码可在多台电脑同时登录，消息广播给全部在线连接
 - 修改客户端发布/打包配置在 `DingDong.csproj` 与 `installer/DingDong.iss`，两者需同步（发布路径 `bin/Release/net6.0-windows/win-x64/publish/`）
 - 完整协议、数据库表结构、全量 API 见 `docs/系统技术文档.md`；第三方接入示例见 `docs/第三方接入文档.md`
 - 生产部署（Nginx + NSSM）见 `deploy/部署说明.md`

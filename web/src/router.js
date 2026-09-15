@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { getToken } from './auth'
+import { getRole, getToken } from './auth'
 
 const routes = [
   { path: '/login', component: () => import('./views/Login.vue') },
@@ -21,6 +21,8 @@ const router = createRouter({ history: createWebHashHistory(), routes })
 
 router.beforeEach((to) => {
   if (to.path !== '/login' && !getToken()) return '/login'
+  // 操作员仅能访问发送消息页
+  if (getRole() === 'oper' && to.path !== '/push') return '/push'
 })
 
 export default router

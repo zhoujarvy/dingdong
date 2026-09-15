@@ -3,5 +3,6 @@
   "port": 8000,
   "admin_password": "请修改为强密码",
   "database": "dingdong.db",
-  "terminal_offline_days": 30
+  "terminal_offline_days": 30,
+  "oper_password": "为操作员设置密码（仅能登录后台发送消息），留空不启用"
 }
