@@ -1,6 +1,12 @@
 # 叮咚 (DingDong)
 
-通用消息推送系统：第三方程序通过 HTTP 接口推送消息，Windows 客户端驻留系统托盘实时接收（提示音 / TTS 朗读 / 右下角弹窗），点击弹窗打开**网页消息中心**查看全文。
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows-green.svg)
+![Server](https://img.shields.io/badge/Server-Python%203.8%2B-yellowgreen.svg)
+
+**自托管的消息推送系统**：第三方程序通过 HTTP 接口推送消息，Windows 客户端驻留系统托盘实时接收（提示音 / TTS 朗读 / 右下角弹窗），点击弹窗打开**网页消息中心**查看全文。专为内网环境设计，一条命令部署，目标机器零依赖。
+
+- 仓库：[GitHub](https://github.com/zhoujarvy/dingdong) · [Gitee](https://gitee.com/jarvy01/dingdong)
 
 - **官网**：服务启动后访问 `http://服务器IP:8000/`——系统介绍、客户端下载、使用教程与接口文档（`web/site.html`，随管理后台一起构建）
 - **管理后台**：`http://服务器IP:8000/admin`（官网页脚的邮戳即隐蔽入口），密码在 `server/config.json`；可另设 `oper_password` 开通操作员账号（仅能发送消息）
@@ -86,3 +92,10 @@ cd web && npm install && npm run dev   # http://localhost:5173
 # 前端构建（产物自动写入 server/static，由服务端托管）
 cd web && npm run build
 ```
+
+## 开源协议
+
+[MIT](LICENSE)——可自由使用、修改、分发与商用，仅需保留版权声明。
+
+欢迎 Issue 反馈问题、PR 贡献代码。如果这个项目对你有帮助，欢迎给个 ⭐ Star。
+
