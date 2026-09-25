@@ -18,9 +18,17 @@ cd web && npm install
 npm run dev      # 开发模式 http://localhost:5173（/api、/ws 代理到 127.0.0.1:8000）
 npm run build    # 构建产物输出到 server/static（emptyOutDir），由服务端托管
 
-# 客户端（C# WPF，.NET 6 自包含单文件发布，目标机免装运行时）
-cd client && make_installer.bat   # dotnet publish → Inno Setup → server/downloads/DingDongSetup.exe + version.txt
+# 客户端（两套并存）
+# Windows WPF 版（.NET 6 自包含单文件，Win7 SP1 兼容，目标机免装运行时）
+cd client/wpf && make_installer.bat   # dotnet publish → Inno Setup → server/downloads/DingDongSetup.exe + version.txt
 dotnet publish DingDong/DingDong.csproj -c Release    # 仅编译，产物约 66MB 单文件 exe
+
+# 跨平台桌面版（Tauri 2 + Vue 3，Win10+/macOS/Linux）
+cd client/desktop && npm install
+npm run tauri dev     # 开发调试（自动起 vite :1420）
+npm run tauri build   # 打包（win: nsis/msi, mac: dmg, linux: appimage/deb）
+
+# CI：打 v* tag 触发 .github/workflows/build-clients.yml，三平台桌面版 + WPF 安装包附到 GitHub Release
 
 # 测试（服务端）
 cd server && python test_e2e.py    # 端到端测试
@@ -39,7 +47,8 @@ cd server && python test_inbox.py  # 收件箱分页测试
   - `app/page_inbox.py`、`app/page_message.py`：**纯 Python 字符串模板**渲染的网页消息中心与消息全文页（非前端框架），修改页面即改这两个文件
   - `app/db.py`：SQLite（WAL 模式），`server/dingdong.db`；含 `auto_revoke_loop`（30 天未连接自动注销终端）
 - **web/**：Vue 3 管理后台源码（views: Overview/Messages/Terminals/ApiKeys/Push 等），vite outDir 直接指向 `server/static`
-- **client/**：WPF + WinForms 托盘（`MainWindow.xaml.cs` 的 `InitTray`），Services 下有 WsClient/ApiClient/TtsService(System.Speech)/NotifyManager/SettingsStore。**.NET 6 self-contained 单文件**，必须保持 Win7 SP1 兼容（这是选 net6 而非 net8 的原因），安装为当前用户模式（PrivilegesRequired=lowest）
+- **client/wpf/**：WPF + WinForms 托盘（`MainWindow.xaml.cs` 的 `InitTray`），Services 下有 WsClient/ApiClient/TtsService(System.Speech)/NotifyManager/SettingsStore。**.NET 6 self-contained 单文件**，必须保持 Win7 SP1 兼容（这是选 net6 而非 net8 的原因），安装为当前用户模式（PrivilegesRequired=lowest）
+- **client/desktop/**：Tauri 2 + Vue 3 跨平台客户端（Win10+/macOS/Linux）。前端（src/：views/composables/ws.ts/store.ts）负责注册登录、WS 连接（心跳/退避重连）、提示音；Rust 侧（src-tauri/src/：tray/notify/tts/settings）负责托盘角标（预生成 1-99 badge 图标）、无边框弹窗、TTS（Win/mac/Linux 各调系统命令）、设置 JSON 持久化、开机自启。两客户端功能与协议完全对齐
 
 ## 重要约定
 

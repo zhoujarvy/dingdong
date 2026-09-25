@@ -169,6 +169,8 @@ PAGE_HTML = """<!DOCTYPE html>
           line-height:1.85; white-space:pre-wrap; word-break:break-word;
           background:#f7f9fb; border-radius:10px; color:#3b4550; }
   .card.open .body { display:block; }
+  .body a { color:#2f6fed; text-decoration:none; word-break:break-all; }
+  .body a:hover { text-decoration:underline; }
   .card.hl { background:#f3f8ff; }
   .card.hl .bar { background:transparent; }
   .card.open.hl { background:#fff; }
@@ -354,6 +356,25 @@ PAGE_HTML = """<!DOCTYPE html>
     }
   }
 
+  // 正文填充：URL（http/https）转为新窗口打开的链接，其余为纯文本节点（防 XSS）
+  function fillBody(el, text) {
+    var s = text || "";
+    var re = /(https?:\/\/[^\s<>"']+)/ig, m, last = 0;
+    el.innerHTML = "";
+    while ((m = re.exec(s)) !== null) {
+      if (m.index > last) el.appendChild(document.createTextNode(s.substring(last, m.index)));
+      var a = document.createElement("a");
+      a.href = m[1];
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.appendChild(document.createTextNode(m[1]));
+      el.appendChild(a);
+      last = m.index + m[1].length;
+    }
+    if (last < s.length) el.appendChild(document.createTextNode(s.substring(last)));
+    if (!el.firstChild) el.appendChild(document.createTextNode("（无内容）"));
+  }
+
   function buildCard(m) {
     var read = !!m.read_at;
     var card = document.createElement("div");
@@ -394,7 +415,7 @@ PAGE_HTML = """<!DOCTYPE html>
 
     var body = document.createElement("div");
     body.className = "body";
-    body.appendChild(document.createTextNode(m.content || "（无内容）"));
+    fillBody(body, m.content);
 
     bar.onclick = function () {
       var opening = card.className.indexOf("open") < 0;

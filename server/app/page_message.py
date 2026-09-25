@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
 from . import db
-from .utils import now_str
+from .utils import now_str, render_content
 
 router = APIRouter()
 
@@ -28,6 +28,8 @@ PAGE = """<!DOCTYPE html>
           padding-bottom: 16px; border-bottom: 1px solid #ebeef5; }}
   .meta span {{ margin-right: 16px; }}
   .content {{ font-size: 16px; line-height: 1.9; white-space: pre-wrap; word-break: break-word; }}
+  .content a {{ color: #2f6fed; text-decoration: none; word-break: break-all; }}
+  .content a:hover {{ text-decoration: underline; }}
   .footer {{ text-align: center; color: #c0c4cc; font-size: 12px; margin-top: 32px; }}
 </style>
 </head>
@@ -72,5 +74,5 @@ def message_page(message_id: int, token: str = ""):
         title=html.escape(row["title"] or ""),
         sender=html.escape(row["sender"] or "-"),
         created_at=html.escape(row["created_at"] or ""),
-        content=html.escape(row["content"] or "（无内容）"),
+        content=render_content(row["content"] or "（无内容）"),
     )

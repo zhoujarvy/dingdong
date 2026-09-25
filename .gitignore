@@ -15,8 +15,14 @@ web/node_modules/
 server/static/
 
 # .NET 构建产物
-client/DingDong/bin/
-client/DingDong/obj/
+client/wpf/DingDong/bin/
+client/wpf/DingDong/obj/
+
+# Tauri 跨平台客户端
+client/desktop/node_modules/
+client/desktop/dist/
+client/desktop/src-tauri/target/
+client/desktop/src-tauri/gen/
 
 # 分发安装包
 server/downloads/

@@ -20,7 +20,8 @@
 |------|--------|------|
 | `server/` | FastAPI + SQLite + WebSocket | 消息接收/推送/离线补发、终端管理、管理后台 API、消息全文页 |
 | `web/` | Vue 3 + Element Plus + Vite | 管理后台源码，构建产物输出到 `server/static` 由服务端托管 |
-| `client/` | C# WPF (.NET 6 自包含) | Windows 托盘客户端，支持 Win7 SP1 / Win10，免装运行时 |
+| `client/wpf/` | C# WPF (.NET 6 自包含) | Windows 托盘客户端，支持 Win7 SP1 / Win10，免装运行时 |
+| `client/desktop/` | Tauri 2 + Vue 3 | 跨平台桌面客户端（Windows 10+/macOS/Linux），功能与 WPF 版对齐 |
 
 ## 快速开始（服务端）
 
@@ -35,23 +36,32 @@ start.bat          # 或: python -m uvicorn app.main:app --host 0.0.0.0 --port 8
 
 ## 快速开始（客户端）
 
-两种方式任选：
+两套客户端功能完全对齐（注册/登录/托盘角标/提示音/TTS 语音/弹窗提醒），按平台任选：
 
-- **推荐**：从官网 `http://服务器IP:8000/` 下载 `DingDongSetup.exe` 安装包（Inno Setup 制作，安装到当前用户目录，无需管理员权限；.NET 运行时已内嵌，免安装）
-- 开发调试：用 Visual Studio 2019/2022（或 `dotnet build`）编译 `client/DingDong.sln`，Release 输出 `DingDong.exe`
+| 平台 | 客户端 | 获取方式 |
+|------|--------|----------|
+| Windows 7 SP1 | WPF 版 | 内网官网下载 `DingDongSetup.exe`（安装到当前用户目录，免管理员，.NET 运行时已内嵌） |
+| Windows 10/11 | 桌面版（推荐）或 WPF 版 | GitHub Releases 下载 nsis/msi 安装包，或内网官网 |
+| macOS / Linux | 桌面版 | GitHub Releases 下载 dmg / AppImage / deb |
+
+- 开发调试（WPF 版）：VS 2019/2022 或 `dotnet build` 编译 `client/wpf/DingDong.sln`
+- 开发调试（桌面版）：`cd client/desktop && npm install && npm run tauri dev`
 
 运行后填写服务器地址与端口（如 `192.168.1.10:8000`）和终端名称，点击注册，获得 6 位终端编码。换电脑时在登录页输入同一「编码 + 名称」即可接管，编号与消息不丢失（同码多台电脑可并存，消息广播到每台）；「退出登录」保留编码，「注销终端」编号作废。
 
-### 客户端打包（生成分发安装包）
+### 客户端打包
 
 ```bat
-cd client
-make_installer.bat
+# WPF 版（本地，产物供内网官网下载）
+cd client/wpf
+make_installer.bat        # dotnet publish → Inno Setup → server/downloads/DingDongSetup.exe + version.txt
+
+# 桌面版（本地，三平台需在对应系统上构建）
+cd client/desktop
+npm run tauri build       # win: nsis/msi, mac: dmg, linux: appimage/deb
 ```
 
-一键完成「编译 → Inno Setup 打包 → 输出到 `server/downloads/DingDongSetup.exe` → 写入版本号 version.txt（官网下载区自动展示版本/大小/日期）」。需要本机安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)。
-
-客户端为 .NET 6 自包含发布，运行时已打包在安装包内，目标机器无需任何额外安装。
+也可**打 `v*` tag 推送 GitHub**，Actions 自动构建全部安装包（三平台桌面版 + WPF 版）并附到 Release。WPF 版为 .NET 6 自包含发布，目标机器无需任何额外安装。
 
 ## 第三方推送接口
 

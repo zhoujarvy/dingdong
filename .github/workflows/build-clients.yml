@@ -1,0 +1,117 @@
+name: Build Clients
+
+# 客户端自动打包：跨平台桌面版（Tauri）三平台 + Windows WPF 版（Win7 兼容）
+# 打 tag（v*）触发，产物附到 GitHub Release；也可手动触发（产物在 Artifacts）
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------- 跨平台桌面客户端（Tauri 2 + Vue 3） ----------
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: ""
+          - os: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - os: macos-latest
+            args: "--target x86_64-apple-darwin"
+          - os: ubuntu-22.04
+            args: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: client/desktop/src-tauri
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install frontend dependencies
+        working-directory: client/desktop
+        run: npm install
+
+      - name: Inject version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: client/desktop
+        run: node scripts/set-version.mjs "${{ github.ref_name }}"
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: client/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "叮咚 ${{ github.ref_name }}"
+          releaseBody: "见 README 与 docs/ 了解各安装包适用平台。Windows 老机器（Win7）请使用 DingDongSetup.exe（WPF 版）。"
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  # ---------- Windows WPF 客户端（.NET 6 自包含，Win7 SP1 兼容） ----------
+  wpf:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Inject version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}" -replace '^v',''
+          (Get-Content client/wpf/DingDong/DingDong.csproj -Raw) `
+            -replace '<Version>[^<]*</Version>', "<Version>$tag</Version>" |
+            Set-Content client/wpf/DingDong/DingDong.csproj -NoNewline
+
+      - name: Publish WPF client
+        run: dotnet publish client/wpf/DingDong/DingDong.csproj -c Release -v q
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+          & $iscc client\wpf\installer\DingDong.iss
+          $v = (Get-Item server\downloads\DingDongSetup.exe).VersionInfo.ProductVersion
+          Set-Content server\downloads\version.txt $v -Encoding ascii
+        shell: pwsh
+
+      - name: Attach to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: server/downloads/DingDongSetup.exe
+
+      - name: Upload artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DingDongSetup-windows-wpf
+          path: server/downloads/DingDongSetup.exe

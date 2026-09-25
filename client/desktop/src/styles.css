@@ -1,0 +1,83 @@
+/* 叮咚跨平台客户端 · 品牌样式（亮/暗自动适配） */
+:root {
+  --brand: #2f6fed;
+  --brand-weak: #eaf1fe;
+  --danger: #f56c6c;
+  --warn: #e6a23c;
+  --ok: #34c77b;
+  --text: #26303b;
+  --text-2: #606266;
+  --text-3: #909399;
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --border: #e4e7ed;
+  --input-bg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #4d84f5;
+    --brand-weak: #1d2b45;
+    --text: #e5eaf3;
+    --text-2: #b3bac7;
+    --text-3: #7d8593;
+    --bg: #141821;
+    --card: #1d232f;
+    --border: #2c3444;
+    --input-bg: #161b25;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #app { height: 100%; }
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+}
+.label { font-size: 13px; color: var(--text-2); margin-bottom: 6px; display: block; }
+.input, .select {
+  width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--input-bg); color: var(--text); font-size: 14px; padding: 0 12px;
+  outline: none; transition: border-color .15s;
+}
+.input:focus, .select:focus { border-color: var(--brand); }
+.btn {
+  height: 38px; border: 1px solid var(--border); border-radius: 9px; background: var(--card);
+  color: var(--text); font-size: 14px; padding: 0 16px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all .15s;
+}
+.btn:hover { border-color: var(--brand); color: var(--brand); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn.danger:hover { background: var(--danger); color: #fff; }
+.btn.warn { color: var(--warn); border-color: var(--warn); background: transparent; }
+.btn.small { height: 30px; font-size: 12.5px; padding: 0 12px; border-radius: 7px; }
+.btn.block { width: 100%; }
+.link { color: var(--brand); cursor: pointer; font-size: 12.5px; }
+.link:hover { text-decoration: underline; }
+.tip { font-size: 12.5px; color: var(--text-3); text-align: center; margin-top: 12px; line-height: 1.6; }
+.tip.error { color: var(--danger); }
+
+/* 连接状态胶囊 */
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px;
+  border-radius: 999px; font-size: 12.5px; background: var(--bg);
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+.pill.online { color: var(--ok); } .pill.online .dot { background: var(--ok); }
+.pill.connecting { color: var(--warn); } .pill.connecting .dot { background: var(--warn); }
+.pill.offline { color: var(--text-3); } .pill.offline .dot { background: var(--text-3); }
+.pill.revoked { color: var(--danger); } .pill.revoked .dot { background: var(--danger); }

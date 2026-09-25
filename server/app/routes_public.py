@@ -15,7 +15,7 @@ from .schemas import (
 )
 from .security import require_api_key
 from .utils import gen_access_token, gen_terminal_code, now_str
-from .ws import deliver_message, kick_terminal
+from .ws import deliver_message, kick_terminal, manager
 
 log = logging.getLogger("dingdong.api")
 
@@ -108,6 +108,20 @@ async def unregister_terminal(req: UnregisterRequest):
         await kick_terminal(terminal["code"])
         log.info("终端自助注销: %s(%s)", terminal["name"], terminal["code"])
     return {"ok": True}
+
+
+@router.get("/terminals/{code}")
+def get_terminal(code: str, _: str = Depends(require_api_key)):
+    """第三方查询终端信息：凭唯一编码获取名称与状态（发送前校验终端是否有效）。"""
+    terminal = db.query_one(
+        "SELECT code, name, status, last_seen_at FROM terminals WHERE code = ?",
+        (code.strip().upper(),),
+    )
+    if not terminal:
+        raise HTTPException(status_code=404, detail="终端不存在")
+    info = dict(terminal)
+    info["online"] = manager.is_online(info["code"])
+    return info
 
 
 @router.get("/health")
