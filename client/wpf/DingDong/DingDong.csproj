@@ -6,7 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>DingDong</AssemblyName>
     <RootNamespace>DingDong</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>1.4.0</Version>
     <Product>叮咚消息推送客户端</Product>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <Deterministic>true</Deterministic>

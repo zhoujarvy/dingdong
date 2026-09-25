@@ -131,6 +131,16 @@ onMounted(async () => {
           <option value="both">标题 + 内容摘要</option>
         </select>
       </div>
+      <div class="tts-mode" style="margin-left:0">
+        弹窗自动关闭：
+        <select v-model.number="settings.NotifyAutoCloseSec" class="select">
+          <option :value="10">10 秒</option>
+          <option :value="30">30 秒</option>
+          <option :value="60">60 秒（默认）</option>
+          <option :value="180">3 分钟</option>
+          <option :value="0">不自动关闭，点击后关闭</option>
+        </select>
+      </div>
 
       <h3 class="mt-lg">其他</h3>
       <label class="check">

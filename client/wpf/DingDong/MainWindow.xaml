@@ -193,6 +193,17 @@
                                 <ComboBoxItem Content="标题 + 内容摘要" Tag="both"/>
                             </ComboBox>
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <TextBlock Text="弹窗自动关闭：" FontSize="13" Foreground="#606266"
+                                       VerticalAlignment="Center"/>
+                            <ComboBox x:Name="CmbNotifyClose" FontSize="12" Width="150" Margin="6,0,0,0">
+                                <ComboBoxItem Content="10 秒" Tag="10"/>
+                                <ComboBoxItem Content="30 秒" Tag="30"/>
+                                <ComboBoxItem Content="60 秒（默认）" Tag="60" IsSelected="True"/>
+                                <ComboBoxItem Content="3 分钟" Tag="180"/>
+                                <ComboBoxItem Content="不自动关闭，点击后关闭" Tag="0"/>
+                            </ComboBox>
+                        </StackPanel>
 
                         <TextBlock Text="其他" FontSize="14" FontWeight="Bold" Foreground="#303133"
                                    Margin="0,20,0,0"/>

@@ -8,6 +8,7 @@ const title = ref(params.get("title") || "新消息");
 const content = ref(params.get("content") || "");
 const sender = ref(params.get("sender") || "");
 const url = ref(params.get("url") || "");
+const closeSec = Number(params.get("close")) || 0;
 const label = ref("");
 const closing = ref(false);
 
@@ -51,8 +52,8 @@ onMounted(async () => {
   } catch {
     /* 非 Tauri 环境（vite dev 直开） */
   }
-  // 5 秒自动关闭（对齐 WPF NotifyWindow）
-  setTimeout(close, 5000);
+  // close>0：到期自动关闭；0 = 不自动关闭，等待人工点击
+  if (closeSec > 0) setTimeout(close, closeSec * 1000);
 });
 </script>
 
@@ -67,7 +68,7 @@ onMounted(async () => {
     <div class="body">
       <div class="title">{{ title }}</div>
       <div v-if="content" class="content">{{ content.slice(0, 80) }}</div>
-      <div class="meta">叮咚{{ sender ? " · " + sender : "" }} · 点击查看</div>
+      <div class="meta">叮咚{{ sender ? " · " + sender : "" }} · {{ closeSec > 0 ? "点击查看" : "点击查看并关闭" }}</div>
     </div>
   </div>
 </template>

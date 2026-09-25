@@ -421,8 +421,8 @@ footer .wrap {
         <a class="btn" href="#api">接口文档</a>
       </div>
       <div class="hero-meta">
-        <span>Windows 7 SP1 / 10</span>
-        <span>.NET 6 自包含 · 免装运行时</span>
+        <span>Windows 7 SP1 / 10 / 11 · macOS · Linux</span>
+        <span>双客户端：WPF 版 + 跨平台桌面版</span>
         <span>内网可用 · 数据不出服务器</span>
         <span>单文件 SQLite 存储</span>
       </div>
@@ -509,7 +509,7 @@ footer .wrap {
     <div class="download-card reveal">
       <span class="corner tl"></span><span class="corner br"></span>
       <div>
-        <div class="dl-title">叮咚 Windows 客户端</div>
+        <div class="dl-title">叮咚 Windows 客户端（Win7 SP1 / Win10）</div>
         <p class="dl-sub">安装后填写服务器地址与终端名称即可注册，无需管理员权限。</p>
         <div class="dl-info" id="dlInfo">
           版本 <b id="dlVer">—</b>　·　大小 <b id="dlSize">—</b><br>
@@ -518,6 +518,17 @@ footer .wrap {
         <div class="dl-actions">
           <a class="btn btn-primary btn-big" id="dlBtn" href="/download/DingDongSetup.exe">下载安装包</a>
           <a class="btn" href="/download/dingdong-api-doc.md">接口文档 .md</a>
+        </div>
+        <div style="height:1px;background:#e3ddd0;margin:18px 0"></div>
+        <div class="dl-title">叮咚跨平台桌面版（Win10 / Win11 / macOS / Linux）</div>
+        <p class="dl-sub">Tauri 2 打造的现代客户端，功能与 Windows 版完全一致；本页提供 Windows 安装包，macOS / Linux 版请前往 GitHub Releases 下载。</p>
+        <div class="dl-info" id="dlInfo2">
+          版本 <b id="dlVer2">—</b>　·　大小 <b id="dlSize2">—</b><br>
+          更新时间 <b id="dlDate2">—</b>　·　运行环境 <b>免安装（自带 WebView 运行时检测）</b>
+        </div>
+        <div class="dl-actions">
+          <a class="btn btn-primary btn-big" id="dlBtn2" href="/download/DingDongDesktopSetup.exe">下载 Windows 安装包</a>
+          <a class="btn" href="https://github.com/zhoujarvy/dingdong/releases" target="_blank" rel="noopener">GitHub Releases（全平台）</a>
         </div>
       </div>
       <div class="dl-side">
@@ -707,6 +718,15 @@ footer .wrap {
       } else {
         document.getElementById("dlInfo").innerHTML = "安装包暂未就绪，请联系管理员放入下载目录";
         document.getElementById("dlBtn").style.display = "none";
+      }
+      var dt = d.desktop || {};
+      if (dt.available) {
+        document.getElementById("dlVer2").textContent = dt.version || "v1.0";
+        document.getElementById("dlSize2").textContent = dt.size_text;
+        document.getElementById("dlDate2").textContent = dt.updated_at;
+      } else {
+        document.getElementById("dlInfo2").innerHTML = "桌面版安装包暂未就绪，可先前往 GitHub Releases 下载";
+        document.getElementById("dlBtn2").style.display = "none";
       }
     } catch (e) {}
   };

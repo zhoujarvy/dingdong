@@ -13,6 +13,8 @@ namespace DingDong.Models
         /// <summary>"title"=仅朗读标题；"both"=朗读标题+内容摘要</summary>
         public string TtsMode { get; set; } = "title";
         public bool AutoStart { get; set; } = false;
+        /// <summary>弹窗自动关闭秒数；0 = 不自动关闭（人工点击后关闭）。默认 60。</summary>
+        public int NotifyAutoCloseSec { get; set; } = 60;
         /// <summary>已退出登录（本地保留编码，换机后可凭编码重新登录）。</summary>
         public bool LoggedOut { get; set; } = false;
 

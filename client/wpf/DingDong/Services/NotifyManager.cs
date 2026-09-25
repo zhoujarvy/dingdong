@@ -37,7 +37,7 @@ namespace DingDong.Services
         {
             if (settings.SoundEnabled) PlaySound();
             if (settings.TtsEnabled) TtsService.SpeakMessage(msg, settings.TtsMode);
-            ShowPopup(msg, settings.ServerUrl);
+            ShowPopup(msg, settings.ServerUrl, settings.NotifyAutoCloseSec);
         }
 
         public static void PlaySound()
@@ -50,10 +50,10 @@ namespace DingDong.Services
             catch { }
         }
 
-        private static void ShowPopup(Message msg, string serverUrl)
+        private static void ShowPopup(Message msg, string serverUrl, int autoCloseSec)
         {
             var url = BuildUrl(serverUrl, msg.Url);
-            var win = new NotifyWindow(msg, url);
+            var win = new NotifyWindow(msg, url, autoCloseSec);
             win.OpenRequested += m =>
             {
                 var handler = PopupOpened;

@@ -91,30 +91,40 @@ def _file(dir_path: str, name: str):
     return FileResponse(path) if os.path.exists(path) else None
 
 
-@app.get("/api/download/info")
-def download_info():
-    """官网展示的客户端安装包信息。"""
+def _installer_info(filename: str, version_file: str) -> dict:
+    """读取下载目录中某个安装包的元信息（文件不存在返回 available=False）。"""
     import datetime
 
-    exe = os.path.join(DOWNLOADS_DIR, "DingDongSetup.exe")
+    exe = os.path.join(DOWNLOADS_DIR, filename)
     if not os.path.exists(exe):
         return {"available": False}
     size = os.path.getsize(exe)
     mtime = datetime.datetime.fromtimestamp(os.path.getmtime(exe))
     version = ""
-    vfile = os.path.join(DOWNLOADS_DIR, "version.txt")
+    vfile = os.path.join(DOWNLOADS_DIR, version_file)
     if os.path.exists(vfile):
         try:
-            version = open(vfile, encoding="ascii").read().strip()
+            version = open(vfile, encoding="utf-8").read().strip()
         except OSError:
             pass
     return {
         "available": True,
-        "filename": "DingDongSetup.exe",
+        "filename": filename,
         "version": version,
         "size_text": "%.1f MB" % (size / 1048576),
         "updated_at": mtime.strftime("%Y-%m-%d %H:%M"),
     }
+
+
+@app.get("/api/download/info")
+def download_info():
+    """官网展示的客户端安装包信息：wpf（Win7 兼容版）+ desktop（跨平台桌面版）。"""
+    wpf = _installer_info("DingDongSetup.exe", "version.txt")
+    # 兼容旧官网 JS：顶层字段即 WPF 版信息
+    info = dict(wpf)
+    info["wpf"] = wpf
+    info["desktop"] = _installer_info("DingDongDesktopSetup.exe", "desktop_version.txt")
+    return info
 
 
 @app.get("/download/{filename}")

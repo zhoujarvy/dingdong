@@ -229,6 +229,23 @@ namespace DingDong
             ChkTts.IsChecked = _settings.TtsEnabled;
             CmbTtsMode.SelectedIndex = _settings.TtsMode == "both" ? 1 : 0;
             ChkAutoStart.IsChecked = _settings.AutoStart;
+            SelectNotifyClose(_settings.NotifyAutoCloseSec);
+        }
+
+        /// <summary>按秒数选中弹窗关闭选项（项顺序：10,30,60,180,0=不关闭）；非预置值取最接近档位。</summary>
+        private void SelectNotifyClose(int sec)
+        {
+            int[] order = { 10, 30, 60, 180, 0 };
+            int idx = Array.IndexOf(order, sec);
+            if (idx < 0)
+            {
+                if (sec <= 0) idx = 4;
+                else if (sec < 20) idx = 0;
+                else if (sec < 45) idx = 1;
+                else if (sec < 120) idx = 2;
+                else idx = 3;
+            }
+            CmbNotifyClose.SelectedIndex = idx;
         }
 
         // ================= 连接 =================
@@ -384,6 +401,7 @@ namespace DingDong
             _settings.SoundEnabled = ChkSound.IsChecked == true;
             _settings.TtsEnabled = ChkTts.IsChecked == true;
             _settings.TtsMode = (CmbTtsMode.SelectedItem as ComboBoxItem)?.Tag as string ?? "title";
+            _settings.NotifyAutoCloseSec = Convert.ToInt32((CmbNotifyClose.SelectedItem as ComboBoxItem)?.Tag as string ?? "60");
             var autoStart = ChkAutoStart.IsChecked == true;
             _settings.AutoStart = autoStart;
             SetAutoStart(autoStart);

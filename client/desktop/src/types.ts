@@ -8,6 +8,8 @@ export interface Settings {
   TtsEnabled: boolean;
   TtsMode: "title" | "both";
   AutoStart: boolean;
+  /** 弹窗自动关闭秒数；0 = 不自动关闭（人工点击后关闭）。默认 60。 */
+  NotifyAutoCloseSec: number;
   LoggedOut: boolean;
 }
 
@@ -21,6 +23,7 @@ export function defaultSettings(): Settings {
     TtsEnabled: false,
     TtsMode: "title",
     AutoStart: false,
+    NotifyAutoCloseSec: 60,
     LoggedOut: false,
   };
 }

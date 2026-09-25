@@ -31,6 +31,7 @@ namespace DingDong.Services
                             TtsEnabled = Json.GetBool(dict, "TtsEnabled", false),
                             TtsMode = Json.GetStr(dict, "TtsMode", "title"),
                             AutoStart = Json.GetBool(dict, "AutoStart", false),
+                            NotifyAutoCloseSec = Json.GetInt(dict, "NotifyAutoCloseSec", 60),
                             LoggedOut = Json.GetBool(dict, "LoggedOut", false),
                         };
                     }
@@ -53,6 +54,7 @@ namespace DingDong.Services
                 { "TtsEnabled", s.TtsEnabled },
                 { "TtsMode", s.TtsMode ?? "title" },
                 { "AutoStart", s.AutoStart },
+                { "NotifyAutoCloseSec", s.NotifyAutoCloseSec },
                 { "LoggedOut", s.LoggedOut },
             }));
         }

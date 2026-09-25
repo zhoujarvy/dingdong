@@ -4,8 +4,8 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 static NOTIFY_SEQ: AtomicI64 = AtomicI64::new(0);
-const NOTIFY_W: f64 = 360.0;
-const NOTIFY_H: f64 = 96.0;
+const NOTIFY_W: f64 = 400.0;
+const NOTIFY_H: f64 = 112.0;
 const NOTIFY_GAP: f64 = 8.0;
 
 /// 弹窗堆叠基准：屏幕右下角向上排列，超过 4 个后回到最底部。
@@ -36,36 +36,49 @@ pub fn active_count(app: &AppHandle) -> usize {
 }
 
 /// 前端调用：弹出消息提醒小窗。
+/// 注意：Tauri 2 Windows 下在同步 command 中直接 build() 会与事件循环互等死锁，
+/// 必须放到独立线程创建（官方 issue 的标准 workaround）。
 #[tauri::command]
-pub fn show_notify(app: AppHandle, message_id: i64, title: String, content: String, sender: String, url: String) -> Result<(), String> {
+pub fn show_notify(app: AppHandle, message_id: i64, title: String, content: String, sender: String, url: String, close_sec: i64) -> Result<(), String> {
+    crate::log_msg(&app, format!("show_notify id={message_id} title={title:?} close={close_sec}s"));
     let idx = (active_count(&app) % 4) as i64;
     let (x, y) = notify_slots(&app)[idx as usize];
     let seq = NOTIFY_SEQ.fetch_add(1, Ordering::SeqCst);
     let label = format!("notify-{}", seq);
 
     let query = format!(
-        "?id={}&title={}&content={}&sender={}&url={}",
+        "?id={}&title={}&content={}&sender={}&url={}&close={}",
         message_id,
         urlencoding_encode(&title),
         urlencoding_encode(&content),
         urlencoding_encode(&sender),
         urlencoding_encode(&url),
+        close_sec,
     );
     let url = WebviewUrl::App(format!("notify.html{}", query).into());
 
-    let win = WebviewWindowBuilder::new(&app, &label, url)
-        .title("叮咚消息")
-        .inner_size(NOTIFY_W, NOTIFY_H)
-        .position(x, y)
-        .decorations(false)
-        .always_on_top(true)
-        .skip_taskbar(true)
-        .resizable(false)
-        .shadow(false)
-        .focused(false)
-        .build()
-        .map_err(|e| e.to_string())?;
-    let _ = win.set_focus();
+    std::thread::spawn(move || {
+        let win = WebviewWindowBuilder::new(&app, &label, url)
+            .title("叮咚消息")
+            .inner_size(NOTIFY_W, NOTIFY_H)
+            .position(x, y)
+            .decorations(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .resizable(false)
+            .shadow(false)
+            .focused(false)
+            .build();
+        match win {
+            Ok(w) => {
+                crate::log_msg(&app, format!("notify window built label={label} pos=({x:.0},{y:.0})"));
+                let _ = w.show();
+            }
+            Err(e) => {
+                crate::log_msg(&app, format!("notify build FAILED: {e}"));
+            }
+        }
+    });
     Ok(())
 }
 

@@ -74,7 +74,10 @@ function startWs() {
           content: m.content,
           sender: m.sender,
           url: m.url?.startsWith("http") ? m.url : settings.ServerUrl.replace(/\/+$/, "") + (m.url || ""),
-        }).catch(() => {});
+          closeSec: settings.NotifyAutoCloseSec,
+        }).catch((e) => {
+          alert(`弹窗创建失败：${(e as Error).message || String(e)}`);
+        });
       },
     },
   );
@@ -89,6 +92,8 @@ function stopWs() {
 function enterHome() {
   view.value = "home";
   state.unread = 0;
+  // 注册/登录成功即落盘身份（否则重启丢失登录态，只有 hello 令牌变化才会保存）
+  persist().catch(() => {});
   updateBadge();
   startWs();
 }
@@ -108,11 +113,19 @@ function backToLogin(keepCode: boolean) {
 }
 
 async function openInbox(messageId?: number) {
-  if (!settings.TerminalCode || !settings.InboxToken) return;
+  const log = (m: string) => invoke("debug_log", { msg: m }).catch(() => {});
+  log(`openInbox code=${settings.TerminalCode} token=${settings.InboxToken ? "yes" : "NO"}`);
+  if (!settings.TerminalCode || !settings.InboxToken) {
+    alert("尚未登录或令牌未同步，暂时无法打开消息中心。");
+    return;
+  }
+  const target = inboxUrl(settings, messageId);
   try {
-    await openUrl(inboxUrl(settings, messageId));
-  } catch {
-    /* ignore */
+    await openUrl(target);
+    log(`openUrl ok: ${target}`);
+  } catch (e) {
+    log(`openUrl FAILED: ${target} err=${(e as Error).message || String(e)}`);
+    alert(`打开消息中心失败：${(e as Error).message}`);
   }
 }
 

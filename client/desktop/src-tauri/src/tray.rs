@@ -10,8 +10,15 @@ use tauri::{
 const TRAY_ID: &str = "dingdong-tray";
 
 fn bell_icon(app: &AppHandle) -> Option<Image<'static>> {
-    // 使用编译期嵌入的应用默认图标（铃铛），dev 与打包环境行为一致。
-    // Image::new_rgba：拷贝像素为_owned 数据，摆脱对 app 的借用。
+    // 优先读资源目录的 512px 高清铃铛（托盘/任务栏缩放均清晰），
+    // 失败时回退编译期嵌入的默认窗口图标。
+    if let Ok(dir) = app.path().resource_dir() {
+        if let Ok(bytes) = std::fs::read(dir.join("icons/icon.png")) {
+            if let Ok(img) = Image::from_bytes(&bytes) {
+                return Some(img);
+            }
+        }
+    }
     let icon = app.default_window_icon()?;
     Some(Image::new_owned(
         icon.rgba().to_vec(),

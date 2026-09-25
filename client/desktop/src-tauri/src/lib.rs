@@ -8,6 +8,28 @@ mod tts;
 
 use tauri::{Manager, WindowEvent};
 
+/// 内部调试日志（与 settings::debug_log 同一文件）。
+pub fn log_msg(app: &tauri::AppHandle, msg: String) {
+    use std::io::Write;
+    let dir = app
+        .path()
+        .app_config_dir()
+        .unwrap_or_default()
+        .join("DingDong");
+    let _ = std::fs::create_dir_all(&dir);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("debug.log"))
+    {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let _ = writeln!(f, "[{ts}] {msg}");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -44,6 +66,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             settings::load_settings,
             settings::save_settings,
+            settings::debug_log,
             tts::tts_speak,
             tray::set_tray_badge,
             tray::set_tray_tooltip,
