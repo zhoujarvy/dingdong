@@ -42,6 +42,9 @@
       "icons/badges/*"
     ],
     "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      },
       "wix": {
         "language": [
           "zh-CN"

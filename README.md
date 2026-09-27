@@ -41,7 +41,7 @@ start.bat          # 或: python -m uvicorn app.main:app --host 0.0.0.0 --port 8
 | 平台 | 客户端 | 获取方式 |
 |------|--------|----------|
 | Windows 7 SP1 | WPF 版 | 内网官网下载 `DingDongSetup.exe`（安装到当前用户目录，免管理员，.NET 运行时已内嵌） |
-| Windows 10/11 | 桌面版（推荐）或 WPF 版 | GitHub Releases 下载 nsis/msi 安装包，或内网官网 |
+| Windows 10/11 | 桌面版（推荐）或 WPF 版 | 内网官网下载（桌面版安装包已内置 WebView2 运行时，离线可装）；外网用户也可从 GitHub Releases 获取 |
 | macOS / Linux | 桌面版 | GitHub Releases 下载 dmg / AppImage / deb |
 
 - 开发调试（WPF 版）：VS 2019/2022 或 `dotnet build` 编译 `client/wpf/DingDong.sln`

@@ -118,12 +118,15 @@ def _installer_info(filename: str, version_file: str) -> dict:
 
 @app.get("/api/download/info")
 def download_info():
-    """官网展示的客户端安装包信息：wpf（Win7 兼容版）+ desktop（跨平台桌面版）。"""
+    """官网展示的客户端安装包信息：wpf（Win7 兼容版）+ desktop（跨平台桌面版）+ webview2 运行时。"""
     wpf = _installer_info("DingDongSetup.exe", "version.txt")
     # 兼容旧官网 JS：顶层字段即 WPF 版信息
     info = dict(wpf)
     info["wpf"] = wpf
     info["desktop"] = _installer_info("DingDongDesktopSetup.exe", "desktop_version.txt")
+    webview2 = _installer_info("WebView2Runtime.exe", "")
+    webview2["version"] = "Evergreen（最新）"
+    info["webview2"] = webview2
     return info
 
 

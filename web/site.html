@@ -521,14 +521,23 @@ footer .wrap {
         </div>
         <div style="height:1px;background:#e3ddd0;margin:18px 0"></div>
         <div class="dl-title">叮咚跨平台桌面版（Win10 / Win11 / macOS / Linux）</div>
-        <p class="dl-sub">Tauri 2 打造的现代客户端，功能与 Windows 版完全一致；本页提供 Windows 安装包，macOS / Linux 版请前往 GitHub Releases 下载。</p>
+        <p class="dl-sub">Tauri 2 打造的现代客户端，功能与 Windows 版完全一致。Windows 安装包已内置 WebView2 运行时，离线内网一键安装；macOS / Linux 安装包请管理员在能联网的电脑上构建后拷入内网分发。</p>
         <div class="dl-info" id="dlInfo2">
           版本 <b id="dlVer2">—</b>　·　大小 <b id="dlSize2">—</b><br>
-          更新时间 <b id="dlDate2">—</b>　·　运行环境 <b>免安装（自带 WebView 运行时检测）</b>
+          更新时间 <b id="dlDate2">—</b>　·　运行环境 <b>已内置 WebView2，无需联网</b>
         </div>
         <div class="dl-actions">
           <a class="btn btn-primary btn-big" id="dlBtn2" href="/download/DingDongDesktopSetup.exe">下载 Windows 安装包</a>
-          <a class="btn" href="https://github.com/zhoujarvy/dingdong/releases" target="_blank" rel="noopener">GitHub Releases（全平台）</a>
+        </div>
+        <div style="height:1px;background:#e3ddd0;margin:18px 0"></div>
+        <div class="dl-title">WebView2 运行时（可选）</div>
+        <p class="dl-sub">桌面版依赖 WebView2 运行时（Win10 / Win11 一般已自带）。若客户端提示缺少运行时，可单独下载此离线安装包，或直接使用上方已内置运行时的桌面版安装包。</p>
+        <div class="dl-info" id="dlInfo3">
+          版本 <b id="dlVer3">—</b>　·　大小 <b id="dlSize3">—</b><br>
+          更新时间 <b id="dlDate3">—</b>　·　来源 <b>微软官方离线安装包（x64）</b>
+        </div>
+        <div class="dl-actions">
+          <a class="btn" id="dlBtn3" href="/download/WebView2Runtime.exe">下载 WebView2 离线安装包</a>
         </div>
       </div>
       <div class="dl-side">
@@ -725,8 +734,17 @@ footer .wrap {
         document.getElementById("dlSize2").textContent = dt.size_text;
         document.getElementById("dlDate2").textContent = dt.updated_at;
       } else {
-        document.getElementById("dlInfo2").innerHTML = "桌面版安装包暂未就绪，可先前往 GitHub Releases 下载";
+        document.getElementById("dlInfo2").innerHTML = "桌面版安装包暂未就绪，请联系管理员放入下载目录";
         document.getElementById("dlBtn2").style.display = "none";
+      }
+      var wv = d.webview2 || {};
+      if (wv.available) {
+        document.getElementById("dlVer3").textContent = wv.version || "Evergreen";
+        document.getElementById("dlSize3").textContent = wv.size_text;
+        document.getElementById("dlDate3").textContent = wv.updated_at;
+      } else {
+        document.getElementById("dlInfo3").innerHTML = "WebView2 离线安装包暂未就绪，请联系管理员放入下载目录";
+        document.getElementById("dlBtn3").style.display = "none";
       }
     } catch (e) {}
   };
