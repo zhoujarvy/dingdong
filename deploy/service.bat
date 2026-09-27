@@ -1,33 +1,38 @@
 @echo off
 rem ============================================================
-rem  叮咚服务端 · NSSM Windows 服务管理脚本
-rem  用法:
-rem    service.bat install    安装并启动服务（开机自启）
-rem    service.bat uninstall  停止并卸载服务
-rem    service.bat restart    重启服务（更新代码后执行）
-rem  前置:
-rem    1. NSSM 已下载，nssm.exe 在 PATH 中或与本脚本同目录
-rem       下载: https://nssm.cc/download
-rem    2. 已按 deploy/部署说明.md 完成 venv 与依赖安装
+rem  DingDong server - NSSM Windows service management script
+rem
+rem  Usage:
+rem    service.bat install    Install and start the service (auto start on boot)
+rem    service.bat uninstall  Stop and remove the service
+rem    service.bat restart    Restart the service (after code updates)
+rem
+rem  Prerequisites:
+rem    1. NSSM downloaded, nssm.exe in PATH or in this directory
+rem       Download: https://nssm.cc/download
+rem    2. venv and dependencies installed (see deploy/offline guide)
+rem
+rem  NOTE: keep this file ASCII-only and CRLF, or cmd.exe may
+rem        fail to parse it under non-UTF8 code pages (GBK etc).
 rem ============================================================
 setlocal
-rem ---- 按实际部署路径修改以下三行 ----
+rem ---- Adjust these three lines to your deployment path ----
 set SERVICE_NAME=DingDongServer
 set APP_DIR=D:\dingdong\server
 set PYTHON_EXE=%APP_DIR%\venv\Scripts\python.exe
 
-rem 定位 nssm.exe
+rem Locate nssm.exe
 set NSSM=nssm
 where nssm >nul 2>&1 || set NSSM=%~dp0nssm.exe
 if not exist "%NSSM%" (
-  echo [错误] 未找到 nssm.exe，请将其放入本目录或加入 PATH。
+  echo [ERROR] nssm.exe not found. Put it in this directory or add to PATH.
   pause & exit /b 1
 )
 
 if "%1"=="install"   goto :install
 if "%1"=="uninstall" goto :uninstall
 if "%1"=="restart"   goto :restart
-echo 用法: service.bat install ^| uninstall ^| restart
+echo Usage: service.bat install ^| uninstall ^| restart
 exit /b 1
 
 :install
@@ -39,16 +44,16 @@ exit /b 1
 "%NSSM%" set %SERVICE_NAME% AppRotateBytes 5242880
 "%NSSM%" set %SERVICE_NAME% Start SERVICE_AUTO_START
 "%NSSM%" start %SERVICE_NAME%
-echo 服务 %SERVICE_NAME% 已安装并启动。管理: nssm status/restart/stop %SERVICE_NAME%
+echo Service %SERVICE_NAME% installed and started. Manage: nssm status/restart/stop %SERVICE_NAME%
 pause & exit /b 0
 
 :uninstall
 "%NSSM%" stop %SERVICE_NAME%
 "%NSSM%" remove %SERVICE_NAME% confirm
-echo 服务已卸载。
+echo Service removed.
 pause & exit /b 0
 
 :restart
 "%NSSM%" restart %SERVICE_NAME%
-echo 服务已重启。
+echo Service restarted.
 pause & exit /b 0

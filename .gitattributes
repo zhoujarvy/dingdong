@@ -1,0 +1,3 @@
+# Windows 批处理脚本：强制 CRLF 行尾（cmd.exe 对 LF 行尾的括号块/goto 解析有缺陷）
+*.bat text eol=crlf
+*.cmd text eol=crlf
